@@ -1,4 +1,10 @@
 .page {
+  --data-clay: color-mix(in srgb, var(--app-accent) 82%, #9d4f2e);
+  --data-sage: color-mix(in srgb, var(--success-color, #6f8d69) 62%, var(--app-accent));
+  --data-ochre: color-mix(in srgb, var(--warning-color, #b9822d) 72%, var(--app-accent));
+  --data-line: color-mix(in srgb, var(--glass-border) 74%, transparent);
+  --data-paper-highlight: color-mix(in srgb, var(--glass-bg) 74%, rgba(255, 244, 217, 0.48));
+  --data-ledger-line: color-mix(in srgb, var(--app-accent) 10%, transparent);
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   align-items: stretch;
@@ -16,15 +22,23 @@
 }
 
 .eyebrow {
+  width: fit-content;
   margin: 0;
-  color: var(--app-accent);
-  font-size: 12px;
+  padding: 4px 9px 3px;
+  border: 1px solid color-mix(in srgb, var(--data-clay) 22%, var(--glass-border));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--data-clay) 10%, var(--glass-bg));
+  color: var(--data-clay);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, white 42%, transparent);
+  font-size: 11px;
   font-weight: 900;
   letter-spacing: 0.18em;
+  line-height: 1;
   text-transform: uppercase;
 }
 
 .transferPanel {
+  position: relative;
   grid-column: 1;
   align-self: stretch;
   display: flex;
@@ -32,9 +46,47 @@
   gap: 18px;
   height: 100%;
   padding: clamp(18px, 2.4vw, 26px);
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 92% 12%, color-mix(in srgb, var(--data-ochre) 17%, transparent) 0 92px, transparent 93px),
+    linear-gradient(135deg, var(--data-paper-highlight), var(--glass-bg) 58%);
+}
+
+.transferPanel::before,
+.transferPanel::after,
+.modelPricesPanel :global([data-model-prices-section='actions'])::before,
+.modelPricesPanel :global([data-model-prices-section='actions'])::after {
+  position: absolute;
+  pointer-events: none;
+  content: '';
+}
+
+.transferPanel::before,
+.modelPricesPanel :global([data-model-prices-section='actions'])::before {
+  inset: 0;
+  opacity: 0.48;
+  background-image:
+    linear-gradient(var(--data-ledger-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--data-ledger-line) 1px, transparent 1px);
+  background-size: 100% 34px, 34px 100%;
+  mask-image: linear-gradient(135deg, rgba(0, 0, 0, 0.72), transparent 68%);
+}
+
+.transferPanel::after,
+.modelPricesPanel :global([data-model-prices-section='actions'])::after {
+  top: 0;
+  right: 24px;
+  left: 24px;
+  height: 3px;
+  border-radius: 0 0 999px 999px;
+  background: linear-gradient(90deg, var(--data-clay), var(--data-ochre), var(--data-sage));
+  opacity: 0.76;
 }
 
 .panelHeader {
+  position: relative;
+  z-index: 1;
+
   div {
     display: flex;
     flex-direction: column;
@@ -42,10 +94,11 @@
   }
 
   h2 {
-    margin: 4px 0 7px;
+    margin: 10px 0 7px;
     color: var(--app-text-primary);
     font-family: var(--font-display);
-    font-size: 24px;
+    font-size: 25px;
+    letter-spacing: -0.02em;
   }
 
   p {
@@ -60,20 +113,34 @@
 }
 
 .panelFooter {
+  position: relative;
+  z-index: 1;
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
-  padding-top: 6px;
-  border-top: 1px solid var(--glass-border);
+  margin-top: auto;
+  padding-top: 14px;
+  border-top: 1px solid color-mix(in srgb, var(--glass-border) 74%, transparent);
+  background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--glass-bg) 42%, transparent));
 
   button {
     flex: 1 1 auto;
     min-width: 140px;
+    border-radius: 14px;
+    transition:
+      transform 160ms ease,
+      box-shadow 160ms ease,
+      border-color 160ms ease;
 
     > span {
       display: inline-flex;
       align-items: center;
       gap: 7px;
+    }
+
+    &:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 24px color-mix(in srgb, var(--app-accent) 12%, transparent);
     }
   }
 }
@@ -90,6 +157,7 @@
   }
 
   :global([data-model-prices-section='actions']) {
+    position: relative;
     grid-column: 2;
     align-self: stretch;
     grid-template-columns: 1fr;
@@ -98,9 +166,12 @@
     min-width: 0;
     height: 100%;
     padding: clamp(18px, 2.4vw, 26px);
+    overflow: hidden;
     border-color: var(--glass-border);
     border-radius: var(--radius-paper-xl, 32px);
-    background: var(--glass-bg);
+    background:
+      radial-gradient(circle at 9% 18%, color-mix(in srgb, var(--data-sage) 16%, transparent) 0 86px, transparent 87px),
+      linear-gradient(135deg, var(--data-paper-highlight), var(--glass-bg) 60%);
     box-shadow: var(--shadow-paper-sm);
     backdrop-filter: blur(var(--app-blur));
     -webkit-backdrop-filter: blur(var(--app-blur));
@@ -111,6 +182,8 @@
   }
 
   :global([data-model-prices-action-part='controls']) {
+    position: relative;
+    z-index: 1;
     display: grid;
     grid-template-columns: repeat(2, minmax(150px, 1fr));
     grid-template-rows: repeat(2, minmax(48px, 1fr));
@@ -132,9 +205,11 @@
     min-height: 48px;
     justify-content: center;
     padding: 0 12px;
-    border-color: var(--glass-border);
+    border-color: color-mix(in srgb, var(--glass-border) 82%, transparent);
     border-radius: 16px;
-    background: color-mix(in srgb, var(--glass-bg) 78%, var(--app-surface-muted, transparent));
+    background:
+      linear-gradient(180deg, color-mix(in srgb, white 20%, transparent), transparent),
+      color-mix(in srgb, var(--glass-bg) 76%, var(--app-surface-muted, transparent));
     color: var(--app-text-regular);
     text-align: center;
     white-space: normal;
@@ -179,6 +254,16 @@
 
   strong {
     color: var(--danger-color);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panelFooter button {
+    transition: none;
+
+    &:hover:not(:disabled) {
+      transform: none;
+    }
   }
 }
 

@@ -1,16 +1,19 @@
 .page {
-  --pricing-surface: var(--bg-primary);
-  --pricing-surface-elevated: color-mix(in srgb, var(--bg-primary) 84%, var(--surface-subtle));
-  --pricing-surface-muted: var(--surface-subtle);
-  --pricing-surface-hover: color-mix(in srgb, var(--surface-subtle-hover) 74%, var(--bg-primary));
-  --pricing-line: var(--border-color);
+  --pricing-surface: color-mix(in srgb, var(--bg-primary) 88%, var(--surface-subtle));
+  --pricing-surface-elevated: color-mix(in srgb, var(--bg-primary) 72%, var(--surface-subtle));
+  --pricing-surface-muted: color-mix(in srgb, var(--surface-subtle) 84%, var(--bg-primary));
+  --pricing-surface-hover: color-mix(in srgb, var(--surface-subtle-hover) 72%, var(--bg-primary));
+  --pricing-line: color-mix(in srgb, var(--border-color) 82%, transparent);
   --pricing-line-strong: var(--border-primary);
   --pricing-ink: var(--text-primary);
   --pricing-muted: var(--text-secondary);
   --pricing-accent: var(--primary-color);
   --pricing-accent-strong: var(--primary-active);
-  --pricing-accent-soft: var(--color-primary-light-9);
+  --pricing-accent-soft: color-mix(in srgb, var(--color-primary-light-9) 78%, var(--bg-primary));
   --pricing-red: var(--error-color);
+  --pricing-sage: color-mix(in srgb, var(--success-color, #66845f) 58%, var(--pricing-accent));
+  --pricing-ochre: color-mix(in srgb, var(--warning-color, #b9832f) 76%, var(--pricing-accent));
+  --pricing-ledger-line: color-mix(in srgb, var(--pricing-accent) 8%, transparent);
   display: grid;
   gap: 10px;
   min-width: 0;
@@ -103,7 +106,9 @@
 .metaPill {
   max-width: 520px;
   overflow: hidden;
-  color: var(--pricing-muted);
+  border-color: color-mix(in srgb, var(--pricing-ochre) 28%, var(--pricing-line));
+  background: color-mix(in srgb, var(--pricing-ochre) 9%, var(--pricing-surface));
+  color: color-mix(in srgb, var(--pricing-muted) 84%, var(--pricing-ink));
   text-overflow: ellipsis;
 }
 
@@ -115,10 +120,33 @@
 }
 
 .pricePanel {
+  position: relative;
   display: grid;
   gap: 10px;
   padding: 10px;
+  overflow: hidden;
   border-radius: 14px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, white 16%, transparent), transparent 42%),
+    var(--pricing-surface);
+}
+
+.pricePanel::before {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.32;
+  background-image: linear-gradient(var(--pricing-ledger-line) 1px, transparent 1px);
+  background-size: 100% 32px;
+  content: '';
+}
+
+.panelToolbar,
+.tableWrap,
+.emptyState,
+.unmatchedBlock {
+  position: relative;
+  z-index: 1;
 }
 
 .panelToolbar {
@@ -152,7 +180,9 @@
   gap: 0;
   border: 1px solid color-mix(in srgb, var(--pricing-line) 86%, transparent);
   border-radius: 12px;
-  background: var(--pricing-surface-elevated);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, white 14%, transparent), transparent),
+    var(--pricing-surface-elevated);
   overflow: hidden;
 }
 
@@ -186,12 +216,15 @@
 .filterButtonActive,
 .filterButtonActive:hover {
   border-left-color: transparent;
-  background: color-mix(in srgb, var(--pricing-accent) 12%, var(--pricing-surface));
+  background:
+    linear-gradient(180deg, color-mix(in srgb, white 16%, transparent), transparent),
+    color-mix(in srgb, var(--pricing-accent) 14%, var(--pricing-surface));
   color: var(--pricing-accent-strong);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--pricing-accent) 18%, transparent);
 }
 
 .filterButtonActive strong {
-  background: color-mix(in srgb, var(--pricing-accent) 22%, var(--pricing-surface));
+  background: color-mix(in srgb, var(--pricing-accent) 24%, var(--pricing-surface));
   color: var(--pricing-accent-strong);
 }
 
@@ -205,9 +238,9 @@
   gap: 5px;
   min-height: 24px;
   padding: 0 8px;
-  border: 1px solid var(--pricing-line);
+  border: 1px solid color-mix(in srgb, var(--pricing-sage) 22%, var(--pricing-line));
   border-radius: 999px;
-  background: var(--pricing-surface-muted);
+  background: color-mix(in srgb, var(--pricing-sage) 8%, var(--pricing-surface-muted));
   color: var(--pricing-muted);
   font-size: 11px;
 }
@@ -218,6 +251,7 @@
 
 .sourceResults .sourceResultError {
   border-color: color-mix(in srgb, var(--pricing-red) 35%, var(--pricing-line));
+  background: color-mix(in srgb, var(--pricing-red) 8%, var(--pricing-surface-muted));
   color: var(--pricing-red);
 }
 
@@ -284,6 +318,10 @@
   overflow-x: auto;
   border: 1px solid var(--pricing-line);
   border-radius: 12px;
+  background:
+    linear-gradient(180deg, var(--pricing-surface-elevated), var(--pricing-surface) 80%),
+    var(--pricing-surface);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, white 24%, transparent);
 }
 
 .priceTable {
@@ -302,11 +340,21 @@
 }
 
 .priceTable th {
-  background: var(--pricing-surface-muted);
-  color: var(--pricing-muted);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--pricing-ochre) 11%, var(--pricing-surface-muted)), var(--pricing-surface-muted));
+  color: color-mix(in srgb, var(--pricing-muted) 72%, var(--pricing-ink));
   font-size: 11px;
   font-weight: 800;
+  letter-spacing: 0.035em;
   line-height: 1;
+}
+
+.priceTable tbody tr:nth-child(even) td {
+  background: color-mix(in srgb, var(--pricing-surface-muted) 34%, transparent);
+}
+
+.priceTable tbody tr:hover td {
+  background: color-mix(in srgb, var(--pricing-accent) 7%, var(--pricing-surface));
 }
 
 .priceTable tr:last-child td {
@@ -349,12 +397,14 @@
 .sourceBadge {
   width: fit-content;
   padding: 2px 7px;
+  border: 1px solid color-mix(in srgb, var(--pricing-accent) 22%, var(--pricing-line));
   border-radius: 999px;
-  background: var(--pricing-surface-muted);
+  background: color-mix(in srgb, var(--pricing-accent) 9%, var(--pricing-surface-muted));
   color: var(--pricing-ink);
   font-family: inherit;
   font-size: 10px;
   font-weight: 800;
+  letter-spacing: 0.04em;
 }
 
 .sourceContent small,
@@ -411,9 +461,12 @@
 .emptyState,
 .unmatchedBlock {
   padding: 12px;
-  border: 1px dashed var(--pricing-line);
+  border: 1px dashed color-mix(in srgb, var(--pricing-ochre) 34%, var(--pricing-line));
   border-radius: 12px;
-  background: var(--pricing-surface-muted);
+  background:
+    linear-gradient(var(--pricing-ledger-line) 1px, transparent 1px),
+    var(--pricing-surface-muted);
+  background-size: 100% 28px, auto;
   color: var(--pricing-muted);
   font-size: 12px;
 }
