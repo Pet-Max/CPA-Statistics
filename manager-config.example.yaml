@@ -1,0 +1,21 @@
+server:
+  listen: "0.0.0.0:8318"
+  dataDir: "/data"
+  dbPath: "/data/usage.sqlite"
+admin:
+  password: "change-me-admin-password"
+cpa:
+  url: "http://your-cpa-host:8317"
+  password: "change-me-cpa-management-password"
+collector:
+  mode: "auto"
+  queue: "usage"
+  popSide: "right"
+  batchSize: 100
+  pollIntervalMs: 500
+  queryLimit: 50000
+security:
+  dataKeyPath: "/data/data.key"
+  tlsSkipVerify: false
+cors:
+  origins: ["*"]

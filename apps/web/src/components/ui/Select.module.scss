@@ -1,0 +1,161 @@
+@use '../../styles/mixins' as *;
+
+.wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.wrapFullWidth {
+  width: 100%;
+}
+
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--app-input-border);
+  border-radius: var(--app-radius-sm);
+  background-color: var(--app-input-bg);
+  box-shadow: none;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  appearance: none;
+  text-align: left;
+  box-sizing: border-box;
+  transition:
+    transform 150ms ease,
+    border-color 150ms ease,
+    background-color 150ms ease,
+    color 150ms ease,
+    box-shadow 150ms ease;
+
+  &:hover {
+    transform: translateY(-1px);
+    border-color: var(--border-hover);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+
+  &:focus {
+    outline: none;
+    background-color: var(--app-input-bg-focus);
+    border-color: var(--app-input-border-focus);
+    box-shadow: 0 0 0 1px var(--app-input-border-focus) inset;
+  }
+
+  &[aria-expanded='true'] {
+    transform: translateY(-1px);
+    background-color: var(--app-input-bg-focus);
+    border-color: var(--app-input-border-focus);
+    box-shadow: 0 0 0 1px var(--app-input-border-focus) inset;
+  }
+}
+
+.triggerText {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.placeholder {
+  color: var(--text-tertiary);
+}
+
+.triggerIcon {
+  display: inline-flex;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+
+  [aria-expanded='true'] > & {
+    transform: rotate(180deg);
+  }
+}
+
+.dropdown {
+  position: fixed;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--app-radius-md);
+  padding: 6px;
+  box-shadow: var(--glass-shadow);
+  backdrop-filter: blur(var(--app-blur));
+  -webkit-backdrop-filter: blur(var(--app-blur));
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 240px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  transform-origin: top center;
+  animation: select-dropdown-in 150ms ease both;
+}
+
+.option {
+  padding: 8px 12px;
+  border-radius: var(--app-radius-sm);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-primary);
+  cursor: pointer;
+  text-align: left;
+  font-size: 13px;
+  font-weight: 500;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+  flex-shrink: 0;
+
+  &:hover {
+    background: var(--app-accent-soft);
+  }
+}
+
+.optionActive {
+  border-color: var(--border-hover);
+  background: var(--app-accent-soft);
+  color: var(--primary-color);
+  font-weight: 600;
+}
+
+.optionHighlighted {
+  background: var(--app-accent-soft);
+}
+
+@keyframes select-dropdown-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trigger,
+  .triggerIcon,
+  .option {
+    transition: none;
+  }
+
+  .dropdown {
+    animation: none;
+  }
+}

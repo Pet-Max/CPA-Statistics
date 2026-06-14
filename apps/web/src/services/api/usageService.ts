@@ -1,0 +1,1124 @@
+import axios from 'axios';
+import type { UsagePayload } from '@/features/monitoring/hooks/useUsageData';
+import { normalizeApiBase } from '@/utils/connection';
+import type { ModelPrice } from '@/utils/usage';
+
+const USAGE_SERVICE_ERROR_CODES = new Set([
+  'request_failed',
+  'connection_env_managed',
+  'cpa_connection_required',
+  'cpa_connection_already_bound',
+  'cpa_connection_required_for_monitoring',
+  'management_api_validation_failed',
+  'management_api_config_failed',
+  'cpa_usage_retention_invalid',
+  'poll_interval_exceeds_retention',
+  'invalid_time_zone',
+  'enable_cpa_usage_statistics_failed',
+  'setup_env_managed',
+  'invalid_existing_management_key',
+  'invalid_admin_key',
+  'invalid_management_key',
+  'usage_service_not_configured',
+  'external_usage_service_base_required',
+  'prices_required',
+  'api_key_aliases_required',
+  'api_key_alias_duplicate',
+  'model_price_sync_failed',
+  'method_not_allowed',
+]);
+
+export interface UsageServiceApiError extends Error {
+  status?: number;
+  code?: string;
+  details?: unknown;
+  data?: unknown;
+}
+
+export interface UsageServiceInfo {
+  service?: string;
+  mode?: string;
+  startedAt?: number;
+  configured?: boolean;
+  adminReady?: boolean;
+  projectInitialized?: boolean;
+  setupRequired?: boolean;
+  migrationStatus?: string;
+  dataKeyReady?: boolean;
+  hasHistoricalData?: boolean;
+}
+
+export interface UsageServiceCollectorStatus {
+  collector?: string;
+  upstream?: string;
+  mode?: string;
+  transport?: string;
+  queue?: string;
+  lastConsumedAt?: number;
+  lastInsertedAt?: number;
+  totalInserted?: number;
+  totalSkipped?: number;
+  deadLetters?: number;
+  lastError?: string;
+}
+
+export interface UsageServiceStatus {
+  service?: string;
+  dbPath?: string;
+  events?: number;
+  deadLetters?: number;
+  collector?: UsageServiceCollectorStatus;
+}
+
+export interface UsageServiceSetupRequest {
+  cpaBaseUrl: string;
+  cpaManagementKey: string;
+  managementKey?: string;
+  collectorMode?: string;
+  queue?: string;
+  popSide?: string;
+  batchSize?: number;
+  pollIntervalMs?: number;
+  queryLimit?: number;
+  tlsSkipVerify?: boolean;
+  ensureUsageStatisticsEnabled?: boolean;
+  requestMonitoringEnabled?: boolean;
+}
+
+export interface ManagerCPAConnectionConfig {
+  cpaBaseUrl: string;
+  managementKey?: string;
+}
+
+export interface ManagerCollectorConfig {
+  enabled?: boolean;
+  collectorMode: string;
+  queue: string;
+  popSide: string;
+  batchSize: number;
+  pollIntervalMs: number;
+  queryLimit: number;
+  tlsSkipVerify?: boolean;
+}
+
+export interface ManagerExternalUsageServiceConfig {
+  enabled: boolean;
+  serviceBase: string;
+}
+
+export interface ManagerConfig {
+  cpaConnection: ManagerCPAConnectionConfig;
+  collector: ManagerCollectorConfig;
+  externalUsageService: ManagerExternalUsageServiceConfig;
+  updatedAtMs?: number;
+}
+
+export interface CPAUsageConfig {
+  usageStatisticsEnabled: boolean;
+  redisUsageQueueRetentionSeconds: number;
+  retentionSourceDefault?: boolean;
+}
+
+export interface ManagerConfigResponse {
+  config: ManagerConfig;
+  source?: 'env' | 'db' | '';
+  cpaUsage?: CPAUsageConfig;
+}
+
+export interface ModelPricesResponse {
+  prices: Record<string, ModelPrice>;
+}
+
+export interface ModelPriceSyncCandidate {
+  sourceModelId: string;
+  score: number;
+  reason: string;
+  price: ModelPrice;
+}
+
+export interface ModelPriceSyncCandidateSet {
+  model: string;
+  candidates: ModelPriceSyncCandidate[];
+}
+
+export interface ModelPriceSyncSourceResult {
+  source: string;
+  models: number;
+  skipped: number;
+  error?: string;
+}
+
+export interface ModelPriceSyncResponse extends ModelPricesResponse {
+  source?: string;
+  sources?: string[];
+  imported: number;
+  skipped: number;
+  matched?: Record<string, ModelPrice>;
+  candidates: ModelPriceSyncCandidateSet[];
+  unmatched: string[];
+  proxyUsed: boolean;
+  sourceResults: ModelPriceSyncSourceResult[];
+}
+
+export interface ApiKeyAlias {
+  apiKeyHash: string;
+  alias: string;
+  updatedAtMs?: number;
+}
+
+export interface ApiKeyAliasesResponse {
+  items: ApiKeyAlias[];
+}
+
+export interface UsageImportResponse {
+  format?: string;
+  added: number;
+  skipped: number;
+  total: number;
+  failed: number;
+  unsupported?: number;
+  warnings?: string[];
+}
+
+export interface UsageExportResponse {
+  blob: Blob;
+  filename: string;
+}
+
+export interface ClearDataRequest {
+  confirmation: 'CLEAR DATA';
+  scope: {
+    usageEvents: boolean;
+    deadLetters: boolean;
+  };
+}
+
+export interface ClearDataResponse {
+  ok: boolean;
+  cleared: {
+    usageEvents: number;
+    deadLetters: number;
+  };
+}
+
+export interface DashboardSummaryWindow {
+  today_start_ms: number;
+  now_ms: number;
+  rolling_30m_start_ms: number;
+}
+
+export interface DashboardTodaySummary {
+  total_calls: number;
+  success_calls: number;
+  failure_calls: number;
+  success_rate: number;
+  input_tokens: number;
+  output_tokens: number;
+  cached_tokens: number;
+  cache_read_tokens: number;
+  cache_creation_tokens: number;
+  reasoning_tokens: number;
+  total_tokens: number;
+  total_cost: number;
+  average_latency_ms: number | null;
+  zero_token_calls: number;
+}
+
+export interface DashboardRollingSummary {
+  rpm: number;
+  tpm: number;
+  total_calls: number;
+  total_tokens: number;
+}
+
+export interface DashboardTopModel {
+  model: string;
+  calls: number;
+  tokens: number;
+  cost: number;
+  success_rate: number;
+}
+
+export interface DashboardTrafficPoint {
+  bucket_ms: number;
+  calls: number;
+  tokens: number;
+  success: number;
+  failure: number;
+  calls_share: number;
+  tokens_share: number;
+  failure_rate: number;
+}
+
+export interface DashboardHourlyActivityPoint {
+  hour_index: number;
+  bucket_ms: number;
+  calls: number;
+  tokens: number;
+  intensity: number;
+}
+
+export interface DashboardTodayRequestHealthTimelinePoint {
+  bucket_ms: number;
+  calls: number;
+  tokens: number;
+  success: number;
+  failure: number;
+  success_rate: number;
+  failure_rate: number;
+  tone: 'future' | 'empty' | 'good' | 'warn' | 'bad' | string;
+  intensity: number;
+  future: boolean;
+}
+
+export interface DashboardTodayRequestHealthTimeline {
+  from_ms: number;
+  to_ms: number;
+  bucket_ms: number;
+  success_calls: number;
+  failure_calls: number;
+  total_calls: number;
+  success_rate: number;
+  points: DashboardTodayRequestHealthTimelinePoint[];
+}
+
+export interface DashboardTokenMixSegment {
+  key: 'input' | 'output' | 'reasoning' | 'cached' | 'cache_read' | 'cache_creation' | string;
+  tokens: number;
+  share: number;
+}
+
+export interface DashboardModelCostRank {
+  model: string;
+  calls: number;
+  tokens: number;
+  cost: number;
+  success_rate: number;
+  cost_share: number;
+}
+
+export interface DashboardChannelHealth {
+  auth_index: string;
+  auth_label?: string;
+  account?: string;
+  channel?: string;
+  source?: string;
+  account_snapshot?: string;
+  auth_label_snapshot?: string;
+  auth_provider_snapshot?: string;
+  calls: number;
+  failures: number;
+  failure_rate: number;
+  success_rate: number;
+  tokens: number;
+  cost: number;
+  average_latency_ms: number | null;
+  tone: 'good' | 'warn' | 'bad' | string;
+}
+
+export interface DashboardFailureSource {
+  source_hash: string;
+  auth_index: string;
+  auth_label?: string;
+  account?: string;
+  channel?: string;
+  source?: string;
+  account_snapshot?: string;
+  auth_label_snapshot?: string;
+  auth_provider_snapshot?: string;
+  calls: number;
+  failures: number;
+  failure_rate: number;
+  last_seen_ms: number;
+  average_latency_ms: number | null;
+  tone: 'good' | 'warn' | 'bad' | string;
+}
+
+export interface DashboardRecentFailure {
+  timestamp_ms: number;
+  model: string;
+  api_key_hash: string;
+  source_hash: string;
+  auth_index: string;
+  auth_label?: string;
+  account?: string;
+  channel?: string;
+  api_key_alias?: string;
+  source?: string;
+  account_snapshot?: string;
+  auth_label_snapshot?: string;
+  auth_provider_snapshot?: string;
+  auth_project_id_snapshot?: string;
+  endpoint: string;
+  duration_ms: number | null;
+  fail_status_code?: number | null;
+  fail_summary?: string;
+}
+
+export interface DashboardSummaryResponse {
+  generated_at_ms: number;
+  window: DashboardSummaryWindow;
+  today: DashboardTodaySummary;
+  rolling_30m: DashboardRollingSummary;
+  top_models_today: DashboardTopModel[];
+  model_cost_rank?: DashboardModelCostRank[];
+  traffic_timeline?: DashboardTrafficPoint[];
+  hourly_activity?: DashboardHourlyActivityPoint[];
+  today_request_health_timeline?: DashboardTodayRequestHealthTimeline;
+  token_mix?: DashboardTokenMixSegment[];
+  channel_health?: DashboardChannelHealth[];
+  failure_sources?: DashboardFailureSource[];
+  recent_failures: DashboardRecentFailure[];
+}
+
+export interface DashboardSummaryParams {
+  todayStartMs: number;
+  nowMs?: number;
+  topModels?: number;
+  recentFailures?: number;
+}
+
+export interface MonitoringAnalyticsFilters {
+  models?: string[];
+  providers?: string[];
+  accounts?: string[];
+  auth_indices?: string[];
+  api_key_hashes?: string[];
+  source_hashes?: string[];
+  include_failed?: boolean;
+  failed_only?: boolean;
+  exclude_zero_token?: boolean;
+}
+
+export interface MonitoringAnalyticsEventsPageRequest {
+  limit?: number;
+  before_ms?: number | null;
+}
+
+export interface MonitoringAnalyticsInclude {
+  summary?: boolean;
+  timeline?: boolean;
+  hourly_distribution?: boolean;
+  model_share?: boolean;
+  channel_share?: boolean;
+  model_stats?: boolean;
+  failure_sources?: boolean;
+  account_stats?: boolean;
+  api_key_stats?: boolean;
+  filter_options?: boolean;
+  task_buckets?: boolean;
+  recent_failures?: number;
+  events_page?: MonitoringAnalyticsEventsPageRequest;
+  granularity?: 'hour' | 'day' | string;
+}
+
+export interface MonitoringAnalyticsRequest {
+  from_ms: number;
+  to_ms: number;
+  now_ms?: number;
+  search_query?: string;
+  search_api_key_hash?: string;
+  filters?: MonitoringAnalyticsFilters;
+  include?: MonitoringAnalyticsInclude;
+}
+
+export interface MonitoringAnalyticsSummary {
+  total_calls: number;
+  success_calls: number;
+  failure_calls: number;
+  success_rate: number;
+  input_tokens: number;
+  output_tokens: number;
+  cached_tokens: number;
+  cache_read_tokens: number;
+  cache_creation_tokens: number;
+  reasoning_tokens: number;
+  total_tokens: number;
+  total_cost: number;
+  average_latency_ms: number | null;
+  zero_token_calls: number;
+  rpm_30m: number;
+  tpm_30m: number;
+  avg_daily_requests: number;
+  avg_daily_tokens: number;
+  approx_tasks: number;
+  approx_task_failures: number;
+  approx_task_success_rate: number;
+  zero_token_models: string[];
+}
+
+export interface MonitoringAnalyticsTimelinePoint {
+  bucket_ms: number;
+  label: string;
+  calls: number;
+  tokens: number;
+  success: number;
+  failure: number;
+}
+
+export interface MonitoringAnalyticsHourlyPoint {
+  hour: number;
+  calls: number;
+  tokens: number;
+}
+
+export interface MonitoringAnalyticsModelShareRow {
+  model: string;
+  calls: number;
+  tokens: number;
+  cost: number;
+}
+
+export interface MonitoringAnalyticsModelStat {
+  model: string;
+  calls: number;
+  success_calls: number;
+  failure_calls: number;
+  success_rate: number;
+  input_tokens: number;
+  output_tokens: number;
+  cached_tokens: number;
+  cache_read_tokens: number;
+  cache_creation_tokens: number;
+  total_tokens: number;
+  cost: number;
+}
+
+export interface MonitoringAnalyticsChannelShareRow {
+  auth_index: string;
+  source?: string;
+  account_snapshot?: string;
+  auth_label_snapshot?: string;
+  auth_provider_snapshot?: string;
+  calls: number;
+  success: number;
+  failure: number;
+  tokens: number;
+  cost: number;
+  average_latency_ms: number | null;
+}
+
+export interface MonitoringAnalyticsFailureSourceRow {
+  source?: string;
+  source_hash: string;
+  auth_index: string;
+  account_snapshot?: string;
+  auth_label_snapshot?: string;
+  auth_provider_snapshot?: string;
+  calls: number;
+  failure: number;
+  last_seen_ms: number;
+  average_latency_ms: number | null;
+}
+
+export interface MonitoringAnalyticsAccountModelStatRow {
+  model: string;
+  calls: number;
+  success_calls: number;
+  failure_calls: number;
+  success_rate: number;
+  input_tokens: number;
+  output_tokens: number;
+  cached_tokens: number;
+  cache_read_tokens: number;
+  cache_creation_tokens: number;
+  total_tokens: number;
+  cost: number;
+  last_seen_ms: number;
+}
+
+export interface MonitoringAnalyticsAccountStatRow {
+  id: string;
+  account_snapshot?: string;
+  auth_label_snapshot?: string;
+  auth_provider_snapshot?: string;
+  auth_indices?: string[];
+  sources?: string[];
+  source_hashes?: string[];
+  calls: number;
+  success_calls: number;
+  failure_calls: number;
+  success_rate: number;
+  input_tokens: number;
+  output_tokens: number;
+  cached_tokens: number;
+  cache_read_tokens: number;
+  cache_creation_tokens: number;
+  total_tokens: number;
+  cost: number;
+  average_latency_ms: number | null;
+  last_seen_ms: number;
+  models?: MonitoringAnalyticsAccountModelStatRow[];
+}
+
+export interface MonitoringAnalyticsApiKeyStatRow {
+  id: string;
+  api_key_hash: string;
+  account_snapshot?: string;
+  auth_label_snapshot?: string;
+  auth_provider_snapshot?: string;
+  auth_indices?: string[];
+  sources?: string[];
+  source_hashes?: string[];
+  calls: number;
+  success_calls: number;
+  failure_calls: number;
+  success_rate: number;
+  input_tokens: number;
+  output_tokens: number;
+  cached_tokens: number;
+  cache_read_tokens: number;
+  cache_creation_tokens: number;
+  total_tokens: number;
+  cost: number;
+  average_latency_ms: number | null;
+  last_seen_ms: number;
+  models?: MonitoringAnalyticsAccountModelStatRow[];
+}
+
+export interface MonitoringAnalyticsFilterOptions {
+  account_stats?: MonitoringAnalyticsAccountStatRow[];
+  api_key_stats?: MonitoringAnalyticsApiKeyStatRow[];
+  channel_share?: MonitoringAnalyticsChannelShareRow[];
+  model_stats?: MonitoringAnalyticsModelStat[];
+}
+
+export interface MonitoringAnalyticsTaskBucketRow {
+  bucket_key: string;
+  total: number;
+  success: number;
+  failure: number;
+  first_ms: number;
+  last_ms: number;
+  source: string;
+  source_hash: string;
+  auth_index: string;
+  models: string[];
+  endpoints: string[];
+  input_tokens: number;
+  output_tokens: number;
+  cached_tokens: number;
+  cache_read_tokens: number;
+  cache_creation_tokens: number;
+  total_tokens: number;
+  average_latency_ms: number | null;
+  max_latency_ms: number | null;
+}
+
+export interface MonitoringAnalyticsRecentFailure {
+  timestamp_ms: number;
+  model: string;
+  api_key_hash: string;
+  source?: string;
+  source_hash: string;
+  auth_index: string;
+  account_snapshot?: string;
+  auth_label_snapshot?: string;
+  auth_provider_snapshot?: string;
+  auth_project_id_snapshot?: string;
+  endpoint: string;
+  duration_ms: number | null;
+  fail_status_code?: number | null;
+  fail_summary?: string;
+}
+
+export interface MonitoringAnalyticsEventRow {
+  event_hash: string;
+  timestamp_ms: number;
+  model: string;
+  endpoint: string;
+  method: string;
+  path: string;
+  auth_index: string;
+  source: string;
+  source_hash: string;
+  api_key_hash: string;
+  account_snapshot: string;
+  auth_label_snapshot: string;
+  auth_provider_snapshot: string;
+  auth_project_id_snapshot?: string;
+  resolved_model?: string;
+  reasoning_effort?: string;
+  service_tier?: string;
+  executor_type?: string;
+  input_tokens: number;
+  output_tokens: number;
+  cached_tokens: number;
+  cache_read_tokens: number;
+  cache_creation_tokens: number;
+  reasoning_tokens: number;
+  total_tokens: number;
+  latency_ms: number | null;
+  ttft_ms?: number | null;
+  failed: boolean;
+  fail_status_code?: number | null;
+  fail_summary?: string;
+}
+
+export interface MonitoringAnalyticsEventsResponse {
+  items: MonitoringAnalyticsEventRow[];
+  next_before_ms: number;
+  has_more: boolean;
+}
+
+export interface MonitoringAnalyticsResponse {
+  generated_at_ms: number;
+  granularity: 'hour' | 'day' | string;
+  summary?: MonitoringAnalyticsSummary;
+  timeline?: MonitoringAnalyticsTimelinePoint[];
+  hourly_distribution?: MonitoringAnalyticsHourlyPoint[];
+  model_share?: MonitoringAnalyticsModelShareRow[];
+  model_stats?: MonitoringAnalyticsModelStat[];
+  channel_share?: MonitoringAnalyticsChannelShareRow[];
+  failure_sources?: MonitoringAnalyticsFailureSourceRow[];
+  account_stats?: MonitoringAnalyticsAccountStatRow[];
+  api_key_stats?: MonitoringAnalyticsApiKeyStatRow[];
+  filter_options?: MonitoringAnalyticsFilterOptions;
+  task_buckets?: MonitoringAnalyticsTaskBucketRow[];
+  recent_failures?: MonitoringAnalyticsRecentFailure[];
+  events?: MonitoringAnalyticsEventsResponse;
+}
+
+const USAGE_SERVICE_TIMEOUT_MS = 15 * 1000;
+const USAGE_SERVICE_TRANSFER_TIMEOUT_MS = 60 * 1000;
+export const USAGE_SERVICE_ID = 'cpa-statistics';
+export const LEGACY_USAGE_SERVICE_ID = 'cpa-manager';
+export const LEGACY_USAGE_SERVICE_IDS = [LEGACY_USAGE_SERVICE_ID, 'cpa-usage-service'] as const;
+export const USAGE_SERVICE_LAST_CPA_BASE_KEY = 'cpa-statistics:last-cpa-base';
+export const LEGACY_USAGE_SERVICE_LAST_CPA_BASE_KEY = 'cpa-manager:last-cpa-base';
+export const LEGACY_USAGE_SERVICE_LAST_CPA_BASE_KEYS = [
+  LEGACY_USAGE_SERVICE_LAST_CPA_BASE_KEY,
+  'cpa-usage-service:last-cpa-base',
+] as const;
+
+export const isUsageServiceId = (service?: string): boolean =>
+  service === USAGE_SERVICE_ID ||
+  (typeof service === 'string' &&
+    (LEGACY_USAGE_SERVICE_IDS as readonly string[]).includes(service));
+
+export const normalizeUsageServiceBase = (input: string): string => normalizeApiBase(input);
+
+const buildUrl = (base: string, path: string): string => {
+  const normalized = normalizeUsageServiceBase(base).replace(/\/+$/, '');
+  return `${normalized}${path}`;
+};
+
+const authHeaders = (managementKey?: string) =>
+  managementKey ? { Authorization: `Bearer ${managementKey}` } : undefined;
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  value !== null && typeof value === 'object';
+
+const readUsageServiceErrorCode = (value: unknown): string => {
+  if (!isRecord(value) || typeof value.code !== 'string') return '';
+  return USAGE_SERVICE_ERROR_CODES.has(value.code) ? value.code : '';
+};
+
+const fallbackUsageServiceCodeByStatus = (status?: number): string => {
+  switch (status) {
+    case 401:
+      return 'invalid_admin_key';
+    case 405:
+      return 'method_not_allowed';
+    case 412:
+      return 'usage_service_not_configured';
+    default:
+      return '';
+  }
+};
+
+export const getUsageServiceErrorCode = (error: unknown): string => {
+  if (axios.isAxiosError(error)) {
+    return (
+      readUsageServiceErrorCode(error.response?.data) ||
+      fallbackUsageServiceCodeByStatus(error.response?.status)
+    );
+  }
+
+  if (!isRecord(error)) return '';
+  const code = typeof error.code === 'string' ? error.code : '';
+  if (USAGE_SERVICE_ERROR_CODES.has(code)) return code;
+  return readUsageServiceErrorCode(error.data) || readUsageServiceErrorCode(error.details);
+};
+
+const readUsageServiceErrorMessage = (value: unknown): string => {
+  if (!isRecord(value)) return '';
+  if (typeof value.error === 'string') return value.error;
+  if (typeof value.message === 'string') return value.message;
+  return '';
+};
+
+const toUsageServiceApiError = (error: unknown): UsageServiceApiError => {
+  if (axios.isAxiosError(error)) {
+    const data = error.response?.data;
+    const message =
+      readUsageServiceErrorMessage(data) || error.message || 'Manager Server request failed';
+    const apiError = new Error(message) as UsageServiceApiError;
+    apiError.name = 'UsageServiceApiError';
+    apiError.status = error.response?.status;
+    apiError.code = getUsageServiceErrorCode(error) || error.code;
+    apiError.details = data;
+    apiError.data = data;
+    return apiError;
+  }
+
+  if (error instanceof Error) return error as UsageServiceApiError;
+  const fallback = new Error(
+    typeof error === 'string' ? error : 'Manager Server request failed'
+  ) as UsageServiceApiError;
+  fallback.name = 'UsageServiceApiError';
+  return fallback;
+};
+
+const withUsageServiceError = async <T>(operation: () => Promise<T>): Promise<T> => {
+  try {
+    return await operation();
+  } catch (error) {
+    throw toUsageServiceApiError(error);
+  }
+};
+
+const readHeader = (headers: unknown, name: string): string => {
+  if (!headers || typeof headers !== 'object') return '';
+  const getter = (headers as { get?: (key: string) => unknown }).get;
+  if (typeof getter === 'function') {
+    const value = getter.call(headers, name);
+    return value === undefined || value === null ? '' : String(value);
+  }
+  const target = name.toLowerCase();
+  const entries = Object.entries(headers as Record<string, unknown>);
+  const match = entries.find(([key]) => key.toLowerCase() === target);
+  return match?.[1] === undefined || match?.[1] === null ? '' : String(match[1]);
+};
+
+const parseContentDispositionFilename = (value: string): string => {
+  const utf8Match = value.match(/filename\*=UTF-8''([^;]+)/i);
+  if (utf8Match?.[1]) {
+    try {
+      return decodeURIComponent(utf8Match[1].trim());
+    } catch {
+      return utf8Match[1].trim();
+    }
+  }
+  const quotedMatch = value.match(/filename="([^"]+)"/i);
+  if (quotedMatch?.[1]) return quotedMatch[1].trim();
+  const plainMatch = value.match(/filename=([^;]+)/i);
+  return plainMatch?.[1]?.trim() || '';
+};
+
+const toFiniteNumber = (value: unknown, fallback = 0): number => {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string' && value.trim() !== '') {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return fallback;
+};
+
+const normalizeModelPriceSyncResponse = (value: unknown): ModelPriceSyncResponse => {
+  const data = isRecord(value) ? value : {};
+  const partial = data as Partial<ModelPriceSyncResponse>;
+  const prices = isRecord(data.prices) ? (data.prices as Record<string, ModelPrice>) : {};
+  return {
+    ...partial,
+    prices,
+    imported: toFiniteNumber(data.imported),
+    skipped: toFiniteNumber(data.skipped),
+    candidates: Array.isArray(data.candidates)
+      ? (data.candidates as ModelPriceSyncCandidateSet[])
+      : [],
+    unmatched: Array.isArray(data.unmatched) ? data.unmatched.map(String) : [],
+    proxyUsed: data.proxyUsed === true,
+    sourceResults: Array.isArray(data.sourceResults)
+      ? (data.sourceResults as ModelPriceSyncSourceResult[])
+      : [],
+  };
+};
+
+export const usageServiceApi = {
+  getInfo: async (base: string): Promise<UsageServiceInfo> => {
+    return withUsageServiceError(async () => {
+      const response = await axios.get<UsageServiceInfo>(buildUrl(base, '/usage-service/info'), {
+        timeout: USAGE_SERVICE_TIMEOUT_MS,
+      });
+      return response.data;
+    });
+  },
+
+  setup: async (
+    base: string,
+    payload: UsageServiceSetupRequest,
+    adminKey?: string
+  ): Promise<void> => {
+    await withUsageServiceError(async () => {
+      await axios.post(buildUrl(base, '/setup'), payload, {
+        timeout: USAGE_SERVICE_TIMEOUT_MS,
+        headers: authHeaders(adminKey),
+      });
+    });
+  },
+
+  getManagerConfig: async (
+    base: string,
+    managementKey?: string
+  ): Promise<ManagerConfigResponse> => {
+    return withUsageServiceError(async () => {
+      const response = await axios.get<ManagerConfigResponse>(
+        buildUrl(base, '/usage-service/config'),
+        {
+          timeout: USAGE_SERVICE_TIMEOUT_MS,
+          headers: authHeaders(managementKey),
+        }
+      );
+      return response.data;
+    });
+  },
+
+  saveManagerConfig: async (
+    base: string,
+    config: ManagerConfig,
+    managementKey?: string
+  ): Promise<ManagerConfigResponse> => {
+    return withUsageServiceError(async () => {
+      const response = await axios.put<ManagerConfigResponse>(
+        buildUrl(base, '/usage-service/config'),
+        { config },
+        {
+          timeout: USAGE_SERVICE_TIMEOUT_MS,
+          headers: authHeaders(managementKey),
+        }
+      );
+      return response.data;
+    });
+  },
+
+  getStatus: async (base: string, managementKey?: string): Promise<UsageServiceStatus> => {
+    return withUsageServiceError(async () => {
+      const response = await axios.get<UsageServiceStatus>(buildUrl(base, '/status'), {
+        timeout: USAGE_SERVICE_TIMEOUT_MS,
+        headers: authHeaders(managementKey),
+      });
+      return response.data;
+    });
+  },
+
+  getUsage: async (base: string, managementKey?: string): Promise<UsagePayload> => {
+    return withUsageServiceError(async () => {
+      const response = await axios.get<UsagePayload>(buildUrl(base, '/v0/management/usage'), {
+        timeout: USAGE_SERVICE_TIMEOUT_MS,
+        headers: authHeaders(managementKey),
+      });
+      return response.data;
+    });
+  },
+
+  getModelPrices: async (base: string, managementKey?: string): Promise<ModelPricesResponse> => {
+    return withUsageServiceError(async () => {
+      const response = await axios.get<ModelPricesResponse>(
+        buildUrl(base, '/v0/management/model-prices'),
+        {
+          timeout: USAGE_SERVICE_TIMEOUT_MS,
+          headers: authHeaders(managementKey),
+        }
+      );
+      return response.data;
+    });
+  },
+
+  saveModelPrices: async (
+    base: string,
+    prices: Record<string, ModelPrice>,
+    managementKey?: string
+  ): Promise<ModelPricesResponse> => {
+    return withUsageServiceError(async () => {
+      const response = await axios.put<ModelPricesResponse>(
+        buildUrl(base, '/v0/management/model-prices'),
+        { prices },
+        {
+          timeout: USAGE_SERVICE_TIMEOUT_MS,
+          headers: authHeaders(managementKey),
+        }
+      );
+      return response.data;
+    });
+  },
+
+  getApiKeyAliases: async (
+    base: string,
+    managementKey?: string
+  ): Promise<ApiKeyAliasesResponse> => {
+    return withUsageServiceError(async () => {
+      const response = await axios.get<ApiKeyAliasesResponse>(
+        buildUrl(base, '/v0/management/api-key-aliases'),
+        {
+          timeout: USAGE_SERVICE_TIMEOUT_MS,
+          headers: authHeaders(managementKey),
+        }
+      );
+      return response.data;
+    });
+  },
+
+  saveApiKeyAliases: async (
+    base: string,
+    items: ApiKeyAlias[],
+    managementKey?: string,
+    activeApiKeyHashes?: string[],
+    allowOrphanAliasCleanup?: boolean
+  ): Promise<ApiKeyAliasesResponse> => {
+    return withUsageServiceError(async () => {
+      const body: {
+        items: ApiKeyAlias[];
+        activeApiKeyHashes?: string[];
+        allowOrphanAliasCleanup?: boolean;
+      } = { items };
+      if (activeApiKeyHashes && activeApiKeyHashes.length > 0) {
+        body.activeApiKeyHashes = activeApiKeyHashes;
+      }
+      if (allowOrphanAliasCleanup) {
+        body.allowOrphanAliasCleanup = true;
+      }
+      const response = await axios.put<ApiKeyAliasesResponse>(
+        buildUrl(base, '/v0/management/api-key-aliases'),
+        body,
+        {
+          timeout: USAGE_SERVICE_TIMEOUT_MS,
+          headers: authHeaders(managementKey),
+        }
+      );
+      return response.data;
+    });
+  },
+
+  deleteApiKeyAlias: async (
+    base: string,
+    apiKeyHash: string,
+    managementKey?: string
+  ): Promise<void> => {
+    await withUsageServiceError(async () => {
+      await axios.delete(
+        buildUrl(base, `/v0/management/api-key-aliases/${encodeURIComponent(apiKeyHash)}`),
+        {
+          timeout: USAGE_SERVICE_TIMEOUT_MS,
+          headers: authHeaders(managementKey),
+        }
+      );
+    });
+  },
+
+  syncModelPrices: async (
+    base: string,
+    managementKey?: string,
+    models?: string[]
+  ): Promise<ModelPriceSyncResponse> => {
+    return withUsageServiceError(async () => {
+      const response = await axios.post<unknown>(
+        buildUrl(base, '/v0/management/model-prices/sync'),
+        models ? { models } : {},
+        {
+          timeout: 30 * 1000,
+          headers: authHeaders(managementKey),
+        }
+      );
+      return normalizeModelPriceSyncResponse(response.data);
+    });
+  },
+
+  exportUsage: async (base: string, managementKey?: string): Promise<UsageExportResponse> => {
+    return withUsageServiceError(async () => {
+      const response = await axios.get<Blob>(buildUrl(base, '/v0/management/usage/export'), {
+        timeout: USAGE_SERVICE_TRANSFER_TIMEOUT_MS,
+        headers: authHeaders(managementKey),
+        responseType: 'blob',
+      });
+      const contentDisposition = readHeader(response.headers, 'content-disposition');
+      return {
+        blob: response.data,
+        filename: parseContentDispositionFilename(contentDisposition) || 'usage-events.jsonl',
+      };
+    });
+  },
+
+  importUsage: async (
+    base: string,
+    payload: Blob | string,
+    managementKey?: string
+  ): Promise<UsageImportResponse> => {
+    return withUsageServiceError(async () => {
+      const response = await axios.post<UsageImportResponse>(
+        buildUrl(base, '/v0/management/usage/import'),
+        payload,
+        {
+          timeout: USAGE_SERVICE_TRANSFER_TIMEOUT_MS,
+          headers: authHeaders(managementKey),
+        }
+      );
+      return response.data;
+    });
+  },
+
+  clearData: async (
+    base: string,
+    request: ClearDataRequest,
+    managementKey?: string
+  ): Promise<ClearDataResponse> => {
+    return withUsageServiceError(async () => {
+      const response = await axios.post<ClearDataResponse>(
+        buildUrl(base, '/v0/management/data/clear'),
+        request,
+        {
+          timeout: USAGE_SERVICE_TIMEOUT_MS,
+          headers: authHeaders(managementKey),
+        }
+      );
+      return response.data;
+    });
+  },
+};
+
+export const dashboardApi = {
+  getSummary: async (
+    base: string,
+    managementKey: string | undefined,
+    params: DashboardSummaryParams
+  ): Promise<DashboardSummaryResponse> => {
+    return withUsageServiceError(async () => {
+      const query: Record<string, number> = {
+        today_start_ms: params.todayStartMs,
+      };
+      if (params.nowMs !== undefined) query.now_ms = params.nowMs;
+      if (params.topModels !== undefined) query.top_models = params.topModels;
+      if (params.recentFailures !== undefined) query.recent_failures = params.recentFailures;
+
+      const response = await axios.get<DashboardSummaryResponse>(
+        buildUrl(base, '/v0/management/dashboard/summary'),
+        {
+          timeout: USAGE_SERVICE_TIMEOUT_MS,
+          headers: authHeaders(managementKey),
+          params: query,
+        }
+      );
+      return response.data;
+    });
+  },
+};
+
+export const monitoringAnalyticsApi = {
+  getAnalytics: async (
+    base: string,
+    managementKey: string | undefined,
+    request: MonitoringAnalyticsRequest
+  ): Promise<MonitoringAnalyticsResponse> => {
+    return withUsageServiceError(async () => {
+      const response = await axios.post<MonitoringAnalyticsResponse>(
+        buildUrl(base, '/v0/management/monitoring/analytics'),
+        request,
+        {
+          timeout: USAGE_SERVICE_TIMEOUT_MS,
+          headers: authHeaders(managementKey),
+        }
+      );
+      return response.data;
+    });
+  },
+};

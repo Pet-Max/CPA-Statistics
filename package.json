@@ -1,0 +1,19 @@
+{
+  "name": "cpa-statistics",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "workspaces": [
+    "apps/web"
+  ],
+  "scripts": {
+    "dev": "npm --workspace apps/web run dev",
+    "build": "npm --workspace apps/web run build",
+    "preview": "npm --workspace apps/web run preview",
+    "test": "npm --workspace apps/web run test -- src",
+    "lint": "npm --workspace apps/web run lint",
+    "format": "npm --workspace apps/web run format",
+    "type-check": "npm --workspace apps/web run type-check",
+    "manager-server:test": "cd apps/manager-server && go test ./..."
+  }
+}

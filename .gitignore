@@ -1,0 +1,88 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Frontend build/cache output
+dist/
+**/dist/
+dist-ssr/
+**/dist-ssr/
+.vite/
+**/.vite/
+.cache/
+**/.cache/
+coverage/
+**/coverage/
+*.tsbuildinfo
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Keep source feature folder named "logs"
+!apps/web/src/features/logs/
+!apps/web/src/features/logs/**
+
+# Local environment/config/secrets
+.env
+.env.*
+*.local
+/manager-config.yaml
+/config.yaml
+/bin/config.yaml
+*.key
+*.pem
+*.crt
+*.p12
+*.pfx
+
+# Runtime data
+/data/
+/run/
+/bin/data/
+*.pid
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+*.tmp
+tmp/
+**/tmp/
+usage.json
+antigravity_usage.json
+codex_usage.json
+
+# Local build binaries/runtime folder
+/bin/
+*.exe
+
+# Local AI/agent/editor files
+.claude/
+.agents/
+.codex/
+.playwright-mcp/
+skills/
+settings.local.json
+CLAUDE.md
+AGENTS.md
+TODO.md
+api.md
+management-api*
+style.md
+
+# Editor/OS files
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

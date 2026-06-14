@@ -1,0 +1,20 @@
+services:
+  cpa-statistics:
+    image: petmax/cpa-statistics:latest
+    restart: unless-stopped
+    ports:
+      - "8318:8318"
+    environment:
+      CPA_MANAGER_CONFIG: "/app/manager-config.yaml"
+      CPA_MANAGER_DATA_KEY_PATH: "/data/data.key"
+    volumes:
+      - ./manager-config.yaml:/app/manager-config.yaml:ro
+      - cpa-statistics-data:/data
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8318/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+volumes:
+  cpa-statistics-data:

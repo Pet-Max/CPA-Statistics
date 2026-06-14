@@ -1,0 +1,856 @@
+import { useState, type ReactNode } from 'react';
+import type { TFunction } from 'i18next';
+import { Card } from '@/components/ui/Card';
+import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
+import {
+  IconChartLine,
+  IconChevronDown,
+  IconChevronRight,
+  IconChevronUp,
+  IconCrosshair,
+  IconInbox,
+  IconInfo,
+  IconRefreshCw,
+  IconTimer,
+  IconTrendingUp,
+} from '@/components/ui/icons';
+import { sortAccountOverviewCardMetrics } from '@/features/monitoring/accountOverviewCardMetrics';
+import type { MonitoringAccountAuthState } from '@/features/monitoring/accountOverviewState';
+import type {
+  MonitoringAccountModelSpendRow,
+  MonitoringAccountRow,
+} from '@/features/monitoring/hooks/useMonitoringData';
+import { formatCompactNumber, formatUsd } from '@/utils/usage';
+import type { StatusBarData } from '@/utils/recentRequests';
+import { MonitoringHealthStatusBar } from './MonitoringHealthStatusBar';
+import {
+  buildAccountSecondaryText,
+  buildAccountSummaryMetrics,
+  formatPercent,
+  getAccountStatusDotClassName,
+  getAccountStatusLabel,
+  getAccountStatusTone,
+  getSuccessRateClassName,
+  type AccountQuotaState,
+  type AccountQuotaWindow,
+  type AccountSummaryMetric,
+} from './accountOverviewPresentation';
+import styles from '../MonitoringCenterPage.module.scss';
+
+export function AccountStatusBadge({
+  authState,
+  t,
+}: {
+  authState: MonitoringAccountAuthState;
+  t: TFunction;
+}) {
+  const tone = getAccountStatusTone(authState);
+  const label = getAccountStatusLabel(authState, t);
+
+  return (
+    <span
+      className={[styles.accountStatusBadge, styles[`accountStatusBadge${tone}`]]
+        .filter(Boolean)
+        .join(' ')}
+      title={label}
+    >
+      <span
+        className={[styles.accountStatusDot, getAccountStatusDotClassName(tone)]
+          .filter(Boolean)
+          .join(' ')}
+        aria-hidden="true"
+      />
+      {label}
+    </span>
+  );
+}
+
+export function AccountSummaryPrimary({
+  row,
+  expanded,
+  onToggle,
+  statusTone = 'enabled',
+  showSecondary = true,
+}: {
+  row: MonitoringAccountRow;
+  expanded: boolean;
+  onToggle: () => void;
+  statusTone?: string;
+  showSecondary?: boolean;
+}) {
+  const secondaryText = buildAccountSecondaryText(row);
+  const accountLabel = row.displayAccount || row.account;
+
+  return (
+    <button
+      type="button"
+      className={[
+        styles.accountButton,
+        expanded ? styles.expandedAccountButton : '',
+        statusTone === 'disabled' || statusTone === 'unavailable' ? styles.accountButtonMuted : '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
+      onClick={onToggle}
+      aria-expanded={expanded}
+      title={accountLabel}
+    >
+      <span className={styles.accountExpandGlyph} aria-hidden="true">
+        {expanded ? <IconChevronUp size={15} /> : <IconChevronDown size={15} />}
+      </span>
+      <span className={styles.accountIdentityLine}>
+        <span
+          className={[styles.accountStatusDot, getAccountStatusDotClassName(statusTone)]
+            .filter(Boolean)
+            .join(' ')}
+          aria-hidden="true"
+        />
+        <span className={styles.accountButtonLabel}>{accountLabel}</span>
+      </span>
+      {showSecondary && secondaryText ? <small>{secondaryText}</small> : null}
+    </button>
+  );
+}
+
+function AccountQuotaPanel({
+  quotaState,
+  locale,
+  t,
+  onRefreshQuota,
+}: {
+  quotaState?: AccountQuotaState;
+  locale: string;
+  t: TFunction;
+  onRefreshQuota: () => void;
+}) {
+  const quotaEntries = quotaState?.entries ?? [];
+  const quotaLoading = quotaState?.status === 'loading';
+  const lastQuotaSync =
+    quotaState?.lastRefreshedAt && Number.isFinite(quotaState.lastRefreshedAt)
+      ? new Date(quotaState.lastRefreshedAt).toLocaleString(locale)
+      : '';
+  const singleQuotaEntry = quotaEntries.length === 1 ? quotaEntries[0] : null;
+  const quotaMetaText = [
+    ...(singleQuotaEntry?.metaLabels ?? []),
+    lastQuotaSync ? `${t('monitoring.last_sync')}: ${lastQuotaSync}` : '',
+  ]
+    .filter(Boolean)
+    .join(' · ');
+
+  const renderQuotaWindows = (windows: AccountQuotaWindow[]) => (
+    <div className={styles.quotaWindowList}>
+      {windows.map((window) => {
+        const percentLabel =
+          window.remainingPercent === null ? '--' : `${Math.round(window.remainingPercent)}%`;
+        const barStyle =
+          window.remainingPercent === null
+            ? undefined
+            : { width: `${Math.max(0, Math.min(100, window.remainingPercent))}%` };
+
+        return (
+          <div key={window.id} className={styles.quotaWindowRow}>
+            <div className={styles.quotaWindowHeader}>
+              <span>{window.label}</span>
+              <strong>{percentLabel}</strong>
+            </div>
+            <div className={styles.quotaProgressTrack}>
+              <span className={styles.quotaProgressBar} style={barStyle} />
+            </div>
+            <div className={styles.quotaWindowMeta}>
+              <small>{`${t('monitoring.account_quota_reset_at')}: ${window.resetLabel}`}</small>
+              {window.usageLabel ? <small>{window.usageLabel}</small> : null}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+
+  const renderRefreshButton = () => (
+    <button
+      type="button"
+      className={styles.quotaRefreshButton}
+      onClick={onRefreshQuota}
+      disabled={quotaLoading}
+    >
+      <IconRefreshCw
+        size={14}
+        className={quotaLoading ? styles.refreshIconSpinning : styles.refreshIcon}
+      />
+      <span>{t('monitoring.account_quota_refresh_button')}</span>
+    </button>
+  );
+
+  const renderStateMessage = (message: ReactNode, hint?: ReactNode, retry = false) => (
+    <div className={styles.quotaStateMessage}>
+      <span>{message}</span>
+      {hint ? <small>{hint}</small> : null}
+      {retry ? (
+        <button
+          type="button"
+          className={styles.quotaRetryButton}
+          onClick={onRefreshQuota}
+          disabled={quotaLoading}
+        >
+          <IconRefreshCw
+            size={14}
+            className={quotaLoading ? styles.refreshIconSpinning : styles.refreshIcon}
+          />
+          <span>{t('monitoring.account_quota_retry_button')}</span>
+        </button>
+      ) : null}
+    </div>
+  );
+
+  return (
+    <section className={styles.quotaSection}>
+      <div className={styles.quotaSectionHeader}>
+        <div className={styles.quotaSectionTitleGroup}>
+          <strong>{t('monitoring.account_quota_title')}</strong>
+          {quotaMetaText ? <span>{quotaMetaText}</span> : null}
+        </div>
+        {renderRefreshButton()}
+      </div>
+
+      {quotaLoading && quotaEntries.length === 0
+        ? renderStateMessage(t('monitoring.account_quota_loading'))
+        : null}
+
+      {!quotaLoading && quotaState?.status === 'error' && quotaEntries.length === 0
+        ? renderStateMessage(
+            t('monitoring.account_quota_load_failed', {
+              message: quotaState.error || t('common.unknown_error'),
+            }),
+            undefined,
+            true
+          )
+        : null}
+
+      {!quotaLoading && quotaState?.status === 'success' && quotaEntries.length === 0
+        ? renderStateMessage(
+            t('monitoring.account_quota_empty'),
+            t('monitoring.account_quota_idle')
+          )
+        : null}
+
+      {!quotaState && quotaEntries.length === 0
+        ? renderStateMessage(
+            t('monitoring.account_quota_empty'),
+            t('monitoring.account_quota_idle')
+          )
+        : null}
+
+      {singleQuotaEntry ? (
+        singleQuotaEntry.error ? (
+          renderStateMessage(
+            t('monitoring.account_quota_load_failed', { message: singleQuotaEntry.error }),
+            undefined,
+            true
+          )
+        ) : singleQuotaEntry.windows.length > 0 ? (
+          renderQuotaWindows(singleQuotaEntry.windows)
+        ) : (
+          renderStateMessage(
+            singleQuotaEntry.emptyMessage ?? t('monitoring.account_quota_empty'),
+            t('monitoring.account_quota_idle')
+          )
+        )
+      ) : quotaEntries.length > 0 ? (
+        <div className={styles.quotaEntryGrid}>
+          {quotaEntries.map((entry) => {
+            const entryMetaText =
+              entry.metaLabels && entry.metaLabels.length > 0
+                ? entry.metaLabels.join(' · ')
+                : `${entry.providerLabel} · ${entry.fileName}`;
+            return (
+              <div key={entry.key} className={styles.quotaEntryCard}>
+                <div className={styles.quotaEntryHeader}>
+                  <div className={styles.quotaEntryMain}>
+                    <strong>{entry.authLabel}</strong>
+                    <small>{entryMetaText}</small>
+                  </div>
+                </div>
+
+                {entry.error
+                  ? renderStateMessage(
+                      t('monitoring.account_quota_load_failed', { message: entry.error }),
+                      undefined,
+                      true
+                    )
+                  : entry.windows.length > 0
+                    ? renderQuotaWindows(entry.windows)
+                    : renderStateMessage(
+                        entry.emptyMessage ?? t('monitoring.account_quota_empty'),
+                        t('monitoring.account_quota_idle')
+                      )}
+              </div>
+            );
+          })}
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+export function AccountTokenMetricGrid({
+  metrics,
+  t,
+  variant = 'card',
+}: {
+  metrics: AccountSummaryMetric[];
+  t: TFunction;
+  variant?: 'card' | 'table';
+}) {
+  const getTokenMetricIcon = (key: string) => {
+    if (key === 'input-tokens') return <IconInbox size={13} />;
+    if (key === 'output-tokens') return <IconTrendingUp size={13} />;
+    if (key === 'cached-tokens') return <IconTimer size={13} />;
+    return <IconChartLine size={13} />;
+  };
+  const getTokenMetricToneClassName = (key: string) => {
+    if (key === 'input-tokens') return styles.accountMetricIconInput;
+    if (key === 'output-tokens') return styles.accountMetricIconOutput;
+    if (key === 'cached-tokens') return styles.accountMetricIconCached;
+    return styles.accountMetricIconTotal;
+  };
+
+  if (variant === 'table') {
+    const tokenStructureMetrics = metrics.filter((metric) =>
+      ['input-tokens', 'output-tokens', 'cached-tokens'].includes(metric.key)
+    );
+    const getTokenStructureRowToneClassName = (key: string) => {
+      if (key === 'input-tokens') return styles.tokenStructureRowInput;
+      if (key === 'output-tokens') return styles.tokenStructureRowOutput;
+      if (key === 'cached-tokens') return styles.tokenStructureRowCached;
+      return '';
+    };
+
+    return (
+      <section className={styles.accountTokenStructurePanel}>
+        <div className={styles.accountSectionHeader}>
+          <strong>{t('monitoring.account_overview_token_structure')}</strong>
+        </div>
+        <div className={styles.tokenStructureRowList}>
+          {tokenStructureMetrics.map((metric) => (
+            <div
+              key={metric.key}
+              className={[styles.tokenStructureRow, getTokenStructureRowToneClassName(metric.key)]
+                .filter(Boolean)
+                .join(' ')}
+            >
+              <span className={styles.tokenStructureRowLeft}>
+                <span className={styles.tokenStructureRowIcon} aria-hidden="true">
+                  {getTokenMetricIcon(metric.key)}
+                </span>
+                <span className={styles.tokenStructureRowLabel}>{metric.label}</span>
+              </span>
+              <strong
+                className={[styles.tokenStructureRowValue, metric.valueClassName]
+                  .filter(Boolean)
+                  .join(' ')}
+              >
+                {metric.value}
+              </strong>
+            </div>
+          ))}
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section className={styles.accountTokenPanel}>
+      <div className={styles.accountSectionHeader}>
+        <strong>{t('monitoring.account_overview_tokens_title')}</strong>
+      </div>
+      <div className={styles.accountOverviewMetricGrid}>
+        {metrics.map((metric) => (
+          <div key={metric.key} className={styles.accountOverviewMetricCard}>
+            <span className={styles.accountOverviewMetricLabel}>
+              <span
+                className={[styles.accountMetricIcon, getTokenMetricToneClassName(metric.key)]
+                  .filter(Boolean)
+                  .join(' ')}
+                aria-hidden="true"
+              >
+                {getTokenMetricIcon(metric.key)}
+              </span>
+              {metric.label}
+            </span>
+            <strong
+              className={[styles.accountOverviewMetricValue, metric.valueClassName]
+                .filter(Boolean)
+                .join(' ')}
+            >
+              {metric.value}
+            </strong>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function AccountHealthStatusPanel({
+  row,
+  hasPrices,
+  locale,
+  t,
+  statusData,
+  scopeText,
+}: {
+  row: MonitoringAccountRow;
+  hasPrices: boolean;
+  locale: string;
+  t: TFunction;
+  statusData: StatusBarData;
+  scopeText: string;
+}) {
+  const healthMetrics = [
+    {
+      key: 'total-calls',
+      label: t('monitoring.total_calls'),
+      value: formatCompactNumber(row.totalCalls),
+    },
+    {
+      key: 'success-calls',
+      label: t('stats.success'),
+      value: formatCompactNumber(row.successCalls),
+      className: styles.goodText,
+    },
+    {
+      key: 'failure-calls',
+      label: t('stats.failure'),
+      value: formatCompactNumber(row.failureCalls),
+      className: row.failureCalls > 0 ? styles.badText : undefined,
+    },
+    {
+      key: 'estimated-cost',
+      label: t('monitoring.estimated_cost'),
+      value: hasPrices ? formatUsd(row.totalCost) : '--',
+      className: styles.primaryText,
+    },
+    {
+      key: 'success-rate',
+      label: t('monitoring.column_success_rate'),
+      value: formatPercent(row.successRate),
+      className: getSuccessRateClassName(row.successRate),
+    },
+  ];
+
+  return (
+    <section className={styles.accountOverviewStatusSection}>
+      <div className={styles.accountSectionHeader}>
+        <strong>{t('monitoring.account_overview_health_label')}</strong>
+        <span
+          className={styles.accountSectionInfo}
+          title={t('monitoring.account_overview_health_hint')}
+        >
+          <IconInfo size={14} />
+        </span>
+      </div>
+      <div className={styles.healthMetricGrid}>
+        {healthMetrics.map((metric) => (
+          <div key={metric.key} className={styles.healthMetricItem}>
+            <span>{metric.label}</span>
+            <strong className={metric.className}>{metric.value}</strong>
+          </div>
+        ))}
+      </div>
+      <MonitoringHealthStatusBar statusData={statusData} locale={locale} t={t} showRate={false} />
+      <div className={styles.accountScopeText}>{scopeText}</div>
+    </section>
+  );
+}
+
+function AccountModelUsageList({
+  row,
+  hasPrices,
+  locale,
+  t,
+  limit = 2,
+}: {
+  row: { id: string; models: MonitoringAccountModelSpendRow[] };
+  hasPrices: boolean;
+  locale: string;
+  t: TFunction;
+  limit?: number;
+}) {
+  const [showAll, setShowAll] = useState(false);
+  const [expandedModels, setExpandedModels] = useState<Record<string, boolean>>({});
+  const hasExtraModels = row.models.length > limit;
+  const visibleModels = showAll ? row.models : row.models.slice(0, limit);
+  const toggleModel = (key: string) =>
+    setExpandedModels((previous) => ({ ...previous, [key]: !previous[key] }));
+
+  return (
+    <section className={styles.accountModelListPanel}>
+      <div className={styles.accountSectionHeader}>
+        <strong>
+          {t('monitoring.account_overview_models_top', {
+            count: Math.min(limit, row.models.length || limit),
+          })}
+        </strong>
+        {hasExtraModels ? (
+          <button
+            type="button"
+            className={styles.accountModelViewAllButton}
+            onClick={() => setShowAll((previous) => !previous)}
+          >
+            {showAll
+              ? t('monitoring.account_overview_collapse_models')
+              : t('monitoring.account_overview_view_all')}
+          </button>
+        ) : null}
+      </div>
+
+      {visibleModels.length > 0 ? (
+        <div className={styles.accountModelList}>
+          {visibleModels.map((model) => {
+            const modelKey = `${row.id}-${model.model}`;
+            const isModelExpanded = Boolean(expandedModels[modelKey]);
+            return (
+              <div key={modelKey} className={styles.accountModelItem}>
+                <button
+                  type="button"
+                  className={styles.accountModelRow}
+                  onClick={() => toggleModel(modelKey)}
+                  aria-expanded={isModelExpanded}
+                >
+                  <span className={styles.accountModelName} title={model.model}>
+                    {model.model}
+                  </span>
+                  <span className={styles.accountModelMetaLine}>
+                    <span className={styles.accountModelStat}>
+                      <small>{t('monitoring.account_overview_model_calls_short')}</small>
+                      <strong>{formatCompactNumber(model.totalCalls)}</strong>
+                    </span>
+                    <span className={styles.accountModelStat}>
+                      <small>{t('monitoring.account_overview_model_success_rate_short')}</small>
+                      <strong className={getSuccessRateClassName(model.successRate)}>
+                        {formatPercent(model.successRate)}
+                      </strong>
+                    </span>
+                    <span className={styles.accountModelStat}>
+                      <small>{t('monitoring.account_overview_model_total_tokens_short')}</small>
+                      <strong>{formatCompactNumber(model.totalTokens)}</strong>
+                    </span>
+                    <span className={styles.accountModelStat}>
+                      <small>{t('monitoring.account_overview_model_total_cost_short')}</small>
+                      <strong>{hasPrices ? formatUsd(model.totalCost) : '--'}</strong>
+                    </span>
+                    <span className={styles.accountModelChevron} aria-hidden="true">
+                      {isModelExpanded ? (
+                        <IconChevronDown size={14} />
+                      ) : (
+                        <IconChevronRight size={14} />
+                      )}
+                    </span>
+                  </span>
+                </button>
+                {isModelExpanded ? (
+                  <div className={styles.accountModelExpanded}>
+                    <div className={styles.accountModelExpandedItem}>
+                      <small>{t('monitoring.input_tokens')}</small>
+                      <strong>{formatCompactNumber(model.inputTokens)}</strong>
+                    </div>
+                    <div className={styles.accountModelExpandedItem}>
+                      <small>{t('monitoring.output_tokens')}</small>
+                      <strong>{formatCompactNumber(model.outputTokens)}</strong>
+                    </div>
+                    <div className={styles.accountModelExpandedItem}>
+                      <small>{t('monitoring.cached_tokens')}</small>
+                      <strong>{formatCompactNumber(model.cachedTokens)}</strong>
+                    </div>
+                    <div className={styles.accountModelExpandedItem}>
+                      <small>{t('monitoring.latest_request_time')}</small>
+                      <strong>{new Date(model.lastSeenAt).toLocaleString(locale)}</strong>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className={styles.emptyBlockSmall}>{t('monitoring.account_overview_no_models')}</div>
+      )}
+    </section>
+  );
+}
+
+export function AccountModelUsageTable({
+  row,
+  hasPrices,
+  locale,
+  t,
+  limit = 2,
+}: {
+  row: { id: string; models: MonitoringAccountModelSpendRow[] };
+  hasPrices: boolean;
+  locale: string;
+  t: TFunction;
+  limit?: number;
+}) {
+  const [showAll, setShowAll] = useState(false);
+  const hasExtraModels = row.models.length > limit;
+  const visibleModels = showAll ? row.models : row.models.slice(0, limit);
+  const modelCountForTitle = Math.min(limit, row.models.length || limit);
+
+  return (
+    <section className={styles.accountModelTablePanel}>
+      <div className={styles.accountSectionHeader}>
+        <strong>
+          {t('monitoring.account_overview_models_top', {
+            count: modelCountForTitle,
+          })}
+        </strong>
+        <button
+          type="button"
+          className={styles.accountModelViewAllButton}
+          onClick={() => setShowAll((previous) => !previous)}
+          disabled={!hasExtraModels}
+        >
+          {showAll
+            ? t('monitoring.account_overview_collapse_models')
+            : t('monitoring.account_overview_view_all')}
+        </button>
+      </div>
+      {visibleModels.length > 0 ? (
+        <table className={styles.accountModelTable}>
+          <thead>
+            <tr>
+              <th>{t('usage_stats.model_price_model')}</th>
+              <th>{t('monitoring.account_overview_model_calls_short')}</th>
+              <th>{t('monitoring.account_overview_model_success_rate_short')}</th>
+              <th>{t('monitoring.account_overview_model_input_tokens_short')}</th>
+              <th>{t('monitoring.account_overview_model_output_tokens_short')}</th>
+              <th>{t('monitoring.account_overview_model_cached_tokens_short')}</th>
+              <th>{t('monitoring.account_overview_model_total_tokens_short')}</th>
+              <th>{t('monitoring.account_overview_model_total_cost_short')}</th>
+              <th>{t('monitoring.latest_request_time')}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {visibleModels.map((model) => (
+              <tr key={`${row.id}-${model.model}`}>
+                <td>
+                  <span className={styles.accountModelName} title={model.model}>
+                    {model.model}
+                  </span>
+                </td>
+                <td>{formatCompactNumber(model.totalCalls)}</td>
+                <td className={getSuccessRateClassName(model.successRate)}>
+                  {formatPercent(model.successRate)}
+                </td>
+                <td>{formatCompactNumber(model.inputTokens)}</td>
+                <td>{formatCompactNumber(model.outputTokens)}</td>
+                <td>{formatCompactNumber(model.cachedTokens)}</td>
+                <td>{formatCompactNumber(model.totalTokens)}</td>
+                <td>{hasPrices ? formatUsd(model.totalCost) : '--'}</td>
+                <td>{new Date(model.lastSeenAt).toLocaleString(locale)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ) : (
+        <div className={styles.emptyBlockSmall}>{t('monitoring.account_overview_no_models')}</div>
+      )}
+    </section>
+  );
+}
+
+export function AccountExpandedDetails({
+  row,
+  hasPrices,
+  locale,
+  t,
+  summaryMetrics,
+  quotaState,
+  onRefreshQuota,
+  variant,
+}: {
+  row: MonitoringAccountRow;
+  hasPrices: boolean;
+  locale: string;
+  t: TFunction;
+  summaryMetrics: AccountSummaryMetric[];
+  quotaState?: AccountQuotaState;
+  onRefreshQuota: () => void;
+  variant: 'card' | 'table';
+}) {
+  const tokenMetrics = sortAccountOverviewCardMetrics(summaryMetrics);
+
+  if (variant === 'table') {
+    return (
+      <div className={styles.expandedAccountDetails}>
+        <AccountQuotaPanel
+          quotaState={quotaState}
+          locale={locale}
+          t={t}
+          onRefreshQuota={onRefreshQuota}
+        />
+        <div className={styles.accountStructureModelPanel}>
+          <AccountTokenMetricGrid metrics={tokenMetrics} t={t} variant="table" />
+          <AccountModelUsageTable row={row} hasPrices={hasPrices} locale={locale} t={t} />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className={styles.accountOverviewCardBody}>
+      <AccountQuotaPanel
+        quotaState={quotaState}
+        locale={locale}
+        t={t}
+        onRefreshQuota={onRefreshQuota}
+      />
+      <AccountModelUsageList row={row} hasPrices={hasPrices} locale={locale} t={t} />
+    </div>
+  );
+}
+
+export function AccountOverviewCard({
+  row,
+  authState,
+  hasPrices,
+  locale,
+  t,
+  isExpanded,
+  isFocused,
+  statusData,
+  scopeText,
+  quotaState,
+  statusUpdating,
+  onToggle,
+  onFocus,
+  onToggleEnabled,
+  onRefreshQuota,
+}: {
+  row: MonitoringAccountRow;
+  authState: MonitoringAccountAuthState;
+  hasPrices: boolean;
+  locale: string;
+  t: TFunction;
+  isExpanded: boolean;
+  isFocused: boolean;
+  statusData: StatusBarData;
+  scopeText: string;
+  quotaState?: AccountQuotaState;
+  statusUpdating: boolean;
+  onToggle: () => void;
+  onFocus: () => void;
+  onToggleEnabled: (enabled: boolean) => void;
+  onRefreshQuota: () => void;
+}) {
+  const summaryMetrics = buildAccountSummaryMetrics(row, hasPrices, locale, t);
+  const cardMetrics = sortAccountOverviewCardMetrics(summaryMetrics);
+  const canToggleEnabled = authState.enabledState !== 'unavailable';
+  const toggleChecked = authState.enabledState === 'enabled';
+  const statusTone = getAccountStatusTone(authState);
+  const secondaryText = buildAccountSecondaryText(row);
+  const latestRequestText = new Date(row.lastSeenAt).toLocaleString(locale);
+
+  return (
+    <Card
+      className={[
+        styles.accountOverviewCard,
+        isExpanded ? styles.accountOverviewCardExpanded : '',
+        isFocused ? styles.accountOverviewCardFocused : '',
+        authState.enabledState === 'disabled' ? styles.accountOverviewCardDisabled : '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
+    >
+      <div className={styles.accountOverviewCardHeader}>
+        <div className={styles.accountTitleRow}>
+          <AccountSummaryPrimary
+            row={row}
+            expanded={isExpanded}
+            onToggle={onToggle}
+            statusTone={statusTone}
+            showSecondary={false}
+          />
+          <div className={styles.accountEnabledControl}>
+            <span className={styles.accountEnabledLabel}>
+              {t('monitoring.account_overview_enabled_label_short')}
+            </span>
+            {authState.enabledState === 'mixed' ? (
+              <div className={styles.accountOverviewToggleActions}>
+                <button
+                  type="button"
+                  className={styles.inlineActionButton}
+                  onClick={() => onToggleEnabled(true)}
+                  disabled={statusUpdating}
+                >
+                  {t('monitoring.account_overview_enable_all')}
+                </button>
+                <button
+                  type="button"
+                  className={styles.inlineActionButton}
+                  onClick={() => onToggleEnabled(false)}
+                  disabled={statusUpdating}
+                >
+                  {t('monitoring.account_overview_disable_all')}
+                </button>
+              </div>
+            ) : (
+              <ToggleSwitch
+                ariaLabel={t('monitoring.account_overview_enabled_label')}
+                checked={toggleChecked}
+                disabled={!canToggleEnabled || statusUpdating}
+                onChange={onToggleEnabled}
+              />
+            )}
+          </div>
+        </div>
+        <div className={styles.accountMetaRow}>
+          {secondaryText ? (
+            <span className={styles.accountOverviewCardTimestamp} title={secondaryText}>
+              {secondaryText}
+            </span>
+          ) : null}
+          {secondaryText ? <span className={styles.accountMetaSeparator}>·</span> : null}
+          <span className={styles.accountOverviewCardTimestamp}>
+            {`${t('monitoring.latest_request_time')}: ${latestRequestText}`}
+          </span>
+          <button
+            type="button"
+            className={`${styles.inlineActionButton} ${styles.accountFocusButton}`}
+            onClick={onFocus}
+          >
+            <IconCrosshair size={12} aria-hidden="true" />
+            <span>
+              {isFocused ? t('monitoring.restore_account_scope') : t('monitoring.focus_account')}
+            </span>
+          </button>
+        </div>
+      </div>
+
+      <AccountHealthStatusPanel
+        row={row}
+        hasPrices={hasPrices}
+        locale={locale}
+        t={t}
+        statusData={statusData}
+        scopeText={scopeText}
+      />
+
+      <AccountTokenMetricGrid metrics={cardMetrics} t={t} />
+
+      {isExpanded ? (
+        <AccountExpandedDetails
+          row={row}
+          hasPrices={hasPrices}
+          locale={locale}
+          t={t}
+          summaryMetrics={summaryMetrics}
+          quotaState={quotaState}
+          onRefreshQuota={onRefreshQuota}
+          variant="card"
+        />
+      ) : null}
+    </Card>
+  );
+}
