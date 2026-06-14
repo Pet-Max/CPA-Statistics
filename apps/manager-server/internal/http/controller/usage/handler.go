@@ -1,7 +1,6 @@
 package usage
 
 import (
-	"errors"
 	"io"
 	"net/http"
 	"strings"
@@ -10,8 +9,6 @@ import (
 	"github.com/seakee/cpa-statistics/apps/manager-server/internal/http/middleware"
 	"github.com/seakee/cpa-statistics/apps/manager-server/internal/http/response"
 )
-
-const maxUsageImportBytes int64 = 64 * 1024 * 1024
 
 type Handler struct {
 	App *app.Context
@@ -56,14 +53,8 @@ func (h *Handler) Export(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) Import(w http.ResponseWriter, r *http.Request) {
-	body := http.MaxBytesReader(w, r.Body, maxUsageImportBytes)
-	data, err := io.ReadAll(body)
+	data, err := io.ReadAll(r.Body)
 	if err != nil {
-		var maxBytesErr *http.MaxBytesError
-		if errors.As(err, &maxBytesErr) {
-			response.Error(w, http.StatusRequestEntityTooLarge, err)
-			return
-		}
 		response.Error(w, http.StatusBadRequest, err)
 		return
 	}

@@ -12,10 +12,8 @@ import { isUsageImportFile } from '@/features/monitoring/model/monitoringCenterP
 import { useRequestMonitoringAvailability } from '@/hooks/useRequestMonitoringAvailability';
 import { useNotificationStore } from '@/stores/useNotificationStore';
 import { downloadBlob } from '@/utils/download';
-import { formatFileSize } from '@/utils/format';
 import styles from './DataPage.module.scss';
 
-const MAX_USAGE_IMPORT_FILE_SIZE = 64 * 1024 * 1024;
 const CLEAR_DATA_CONFIRMATION = 'CLEAR DATA';
 
 export function DataPage() {
@@ -103,16 +101,6 @@ export function DataPage() {
         showNotification(t('usage_stats.import_invalid'), 'error');
         return;
       }
-      if (file.size > MAX_USAGE_IMPORT_FILE_SIZE) {
-        showNotification(
-          t('usage_stats.import_file_too_large', {
-            maxSize: formatFileSize(MAX_USAGE_IMPORT_FILE_SIZE),
-          }),
-          'error'
-        );
-        return;
-      }
-
       showConfirmation({
         title: t('usage_stats.import_confirm_title'),
         message: t('usage_stats.import_confirm_body', { name: file.name }),
@@ -185,7 +173,7 @@ export function DataPage() {
             <h2>{t('data_page.transfer_title', { defaultValue: '数据迁移' })}</h2>
             <p>
               {t('data_page.transfer_desc', {
-                defaultValue: '导出 JSONL 请求事件，或导入历史 usage 数据；导入文件最大 64MB。',
+                defaultValue: '导入、导出与清空请求事件。',
               })}
             </p>
           </div>
@@ -229,7 +217,7 @@ export function DataPage() {
       </section>
 
       <section className={styles.modelPricesPanel}>
-        <ModelPricesPage embedded />
+        <ModelPricesPage embedded dataPageLayout />
       </section>
     </div>
   );

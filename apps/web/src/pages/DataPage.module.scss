@@ -1,7 +1,7 @@
 .page {
   display: grid;
-  grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
-  align-items: start;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
   gap: 20px;
 }
 
@@ -25,11 +25,12 @@
 }
 
 .transferPanel {
-  position: sticky;
-  top: 18px;
+  grid-column: 1;
+  align-self: stretch;
   display: flex;
   flex-direction: column;
   gap: 18px;
+  height: 100%;
   padding: clamp(18px, 2.4vw, 26px);
 }
 
@@ -82,12 +83,86 @@
 }
 
 .modelPricesPanel {
-  min-width: 0;
-  padding: 0;
-  overflow: hidden;
+  display: contents;
 
-  > div {
-    margin: 0;
+  :global([data-model-prices-layout='data-page']) {
+    display: contents;
+  }
+
+  :global([data-model-prices-section='actions']) {
+    grid-column: 2;
+    align-self: stretch;
+    grid-template-columns: 1fr;
+    align-content: stretch;
+    align-items: stretch;
+    min-width: 0;
+    height: 100%;
+    padding: clamp(18px, 2.4vw, 26px);
+    border-color: var(--glass-border);
+    border-radius: var(--radius-paper-xl, 32px);
+    background: var(--glass-bg);
+    box-shadow: var(--shadow-paper-sm);
+    backdrop-filter: blur(var(--app-blur));
+    -webkit-backdrop-filter: blur(var(--app-blur));
+  }
+
+  :global([data-model-prices-action-part='title']) {
+    display: none;
+  }
+
+  :global([data-model-prices-action-part='controls']) {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(150px, 1fr));
+    grid-template-rows: repeat(2, minmax(48px, 1fr));
+    align-content: stretch;
+    align-items: stretch;
+    align-self: stretch;
+    justify-content: stretch;
+    width: 100%;
+    min-width: 0;
+    height: 100%;
+    gap: 12px;
+  }
+
+  :global([data-model-prices-control-item]) {
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    min-width: 0;
+    min-height: 48px;
+    justify-content: center;
+    padding: 0 12px;
+    border-color: var(--glass-border);
+    border-radius: 16px;
+    background: color-mix(in srgb, var(--glass-bg) 78%, var(--app-surface-muted, transparent));
+    color: var(--app-text-regular);
+    text-align: center;
+    white-space: normal;
+  }
+
+  :global([data-model-prices-control-item='status']),
+  :global([data-model-prices-control-item='count']) {
+    color: var(--app-text-muted);
+    font-weight: 800;
+    line-height: 1.35;
+  }
+
+  :global([data-model-prices-control-item='manual']),
+  :global([data-model-prices-control-item='sync']) {
+    min-height: 48px;
+    box-shadow: none;
+  }
+
+  :global([data-model-prices-control-item] > span) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+    gap: 7px;
+  }
+
+  :global([data-model-prices-section='content']) {
+    grid-column: 1 / -1;
   }
 }
 
@@ -112,7 +187,18 @@
     grid-template-columns: 1fr;
   }
 
-  .transferPanel {
-    position: static;
+  .modelPricesPanel {
+    :global([data-model-prices-section='actions']),
+    :global([data-model-prices-section='content']) {
+      grid-column: 1;
+    }
+  }
+}
+
+@media (max-width: 620px) {
+  .modelPricesPanel {
+    :global([data-model-prices-action-part='controls']) {
+      grid-template-columns: 1fr;
+    }
   }
 }

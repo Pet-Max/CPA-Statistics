@@ -102,7 +102,6 @@ import { authFilesApi } from '@/services/api/authFiles';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useConfigStore } from '@/stores/useConfigStore';
 import { useNotificationStore } from '@/stores/useNotificationStore';
-import { formatFileSize } from '@/utils/format';
 import type { StatusBarData } from '@/utils/recentRequests';
 import { downloadBlob } from '@/utils/download';
 import { sha256Hex } from '@/utils/apiKeyHash';
@@ -112,7 +111,6 @@ import styles from './MonitoringCenterPage.module.scss';
 export { AccountExpandedDetails, AccountOverviewCard };
 
 const DEFAULT_ACCOUNT_PAGE_SIZE = ACCOUNT_OVERVIEW_TABLE_PAGE_SIZE_OPTIONS[0];
-const MAX_USAGE_IMPORT_FILE_SIZE = 64 * 1024 * 1024;
 const EMPTY_STATUS_BAR_DATA: StatusBarData = {
   blocks: [],
   blockDetails: [],
@@ -1130,15 +1128,6 @@ export function MonitoringCenterPage({ mode = 'all' }: MonitoringCenterPageProps
 
       if (!isUsageImportFile(file)) {
         showNotification(t('usage_stats.import_invalid'), 'error');
-        return;
-      }
-      if (file.size > MAX_USAGE_IMPORT_FILE_SIZE) {
-        showNotification(
-          t('usage_stats.import_file_too_large', {
-            maxSize: formatFileSize(MAX_USAGE_IMPORT_FILE_SIZE),
-          }),
-          'error'
-        );
         return;
       }
 

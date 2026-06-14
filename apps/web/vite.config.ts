@@ -37,7 +37,7 @@ function getVersion(): string {
     // package.json not readable
   }
 
-  return 'v1.0.0';
+  return 'v1.0.1';
 }
 
 // https://vitejs.dev/config/

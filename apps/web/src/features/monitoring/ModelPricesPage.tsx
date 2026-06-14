@@ -39,9 +39,10 @@ const resolveErrorMessage = (error: unknown, fallback: string) => {
 
 interface ModelPricesPageProps {
   embedded?: boolean;
+  dataPageLayout?: boolean;
 }
 
-export function ModelPricesPage({ embedded = false }: ModelPricesPageProps) {
+export function ModelPricesPage({ embedded = false, dataPageLayout = false }: ModelPricesPageProps) {
   const { t } = useTranslation();
   const { showNotification } = useNotificationStore();
   const featureAvailability = usePanelFeatureAvailability();
@@ -175,22 +176,35 @@ export function ModelPricesPage({ embedded = false }: ModelPricesPageProps) {
   };
 
   return (
-    <div className={styles.page}>
-      <section className={styles.actionBar} aria-label={t('common.action')}>
-        <div className={styles.titleGroup}>
+    <div
+      className={`${styles.page} ${dataPageLayout ? styles.dataPageLayout : ''}`}
+      data-model-prices-layout={dataPageLayout ? 'data-page' : undefined}
+    >
+      <section
+        className={styles.actionBar}
+        aria-label={t('common.action')}
+        data-model-prices-section={dataPageLayout ? 'actions' : undefined}
+      >
+        <div
+          className={styles.titleGroup}
+          data-model-prices-action-part={dataPageLayout ? 'title' : undefined}
+        >
           {!embedded && featureAvailability.requestMonitoringAvailable ? (
             <Link to="/usage" className={styles.backLink}>
               {t('model_prices.back_to_monitoring')}
             </Link>
           ) : null}
         </div>
-        <div className={styles.actionGroup}>
-          <span className={styles.metaPill}>
+        <div
+          className={styles.actionGroup}
+          data-model-prices-action-part={dataPageLayout ? 'controls' : undefined}
+        >
+          <span className={styles.metaPill} data-model-prices-control-item="status">
             {usageServiceAvailable
               ? t('model_prices.usage_service_ready')
               : t('model_prices.usage_service_required')}
           </span>
-          <span className={styles.metaPill}>
+          <span className={styles.metaPill} data-model-prices-control-item="count">
             {t('model_prices.sync_model_count', { count: syncModels.length })}
           </span>
           <Button
@@ -198,16 +212,25 @@ export function ModelPricesPage({ embedded = false }: ModelPricesPageProps) {
             variant="secondary"
             onClick={() => openManualEditor()}
             className={styles.toolbarButton}
+            data-model-prices-control-item="manual"
           >
             {t('model_prices.add_manual')}
           </Button>
-          <Button size="xs" onClick={() => void handleSync()} loading={syncing}>
+          <Button
+            size="xs"
+            onClick={() => void handleSync()}
+            loading={syncing}
+            data-model-prices-control-item="sync"
+          >
             {t('usage_stats.model_price_sync')}
           </Button>
         </div>
       </section>
 
-      <section className={styles.pricePanel}>
+      <section
+        className={styles.pricePanel}
+        data-model-prices-section={dataPageLayout ? 'content' : undefined}
+      >
         <div className={styles.panelToolbar}>
           <div className={styles.searchWrap}>
             <Input

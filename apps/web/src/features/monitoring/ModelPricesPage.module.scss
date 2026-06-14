@@ -17,6 +17,10 @@
   color: var(--pricing-ink);
 }
 
+.dataPageLayout {
+  min-width: 0;
+}
+
 .actionBar,
 .pricePanel {
   min-width: 0;

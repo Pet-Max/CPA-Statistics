@@ -1,5 +1,5 @@
 FROM --platform=$BUILDPLATFORM node:22-alpine AS web-build
-ARG VERSION=v1.0.0
+ARG VERSION=v1.0.1
 WORKDIR /app
 COPY package*.json ./
 COPY apps/web/package.json ./apps/web/package.json
