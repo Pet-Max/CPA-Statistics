@@ -7,6 +7,7 @@ import "github.com/seakee/cpa-statistics/apps/manager-server/internal/model"
 const PerMillion = 1_000_000.0
 
 // ModelTokens represents the token totals consumed by a single model.
+// InputTokens is the normalized non-cache input used for pricing.
 // CachedTokens is the remaining legacy/OpenAI-style cached input after any
 // fine-grained cache_read/cache_creation values have already been removed.
 type ModelTokens struct {
@@ -33,22 +34,13 @@ func CostForModel(modelName string, tokens ModelTokens, prices map[string]model.
 	cachedTokens := maxInt64(tokens.CachedTokens, 0)
 	cacheReadTokens := maxInt64(tokens.CacheReadTokens, 0)
 	cacheCreationTokens := maxInt64(tokens.CacheCreationTokens, 0)
-	if cacheReadTokens > 0 || cacheCreationTokens > 0 {
-		promptTokens := maxInt64(inputTokens-cachedTokens, 0)
-		cacheReadPrice := fallbackPrice(price.CacheRead, price.Cache)
-		cacheCreationPrice := fallbackPrice(price.CacheCreation, price.Prompt)
-		return float64(promptTokens)*price.Prompt/PerMillion +
-			float64(outputTokens)*price.Completion/PerMillion +
-			float64(cachedTokens)*price.Cache/PerMillion +
-			float64(cacheReadTokens)*cacheReadPrice/PerMillion +
-			float64(cacheCreationTokens)*cacheCreationPrice/PerMillion
-	}
-
-	promptTokens := maxInt64(inputTokens-cachedTokens, 0)
-
-	return float64(promptTokens)*price.Prompt/PerMillion +
+	cacheReadPrice := fallbackPrice(price.CacheRead, price.Cache)
+	cacheCreationPrice := fallbackPrice(price.CacheCreation, price.Prompt)
+	return float64(inputTokens)*price.Prompt/PerMillion +
 		float64(outputTokens)*price.Completion/PerMillion +
-		float64(cachedTokens)*price.Cache/PerMillion
+		float64(cachedTokens)*price.Cache/PerMillion +
+		float64(cacheReadTokens)*cacheReadPrice/PerMillion +
+		float64(cacheCreationTokens)*cacheCreationPrice/PerMillion
 }
 
 // SumCost folds CostForModel over a slice of (model, tokens) tuples.

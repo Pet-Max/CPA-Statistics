@@ -13,6 +13,8 @@ type Repository interface {
 	InsertBatch(ctx context.Context, events []model.UsageEvent) (model.InsertResult, error)
 	ListRecent(ctx context.Context, limit int) ([]model.UsageEvent, error)
 	Count(ctx context.Context) (int64, error)
+	BackfillCacheAccounting(ctx context.Context, batchSize int) (int, error)
+	ModelPriceMigrationCandidates(ctx context.Context, prices map[string]model.ModelPrice) ([]model.ModelPriceSyncCandidateSet, error)
 	ExportJSONL(ctx context.Context) ([]byte, error)
 	AggregateBetween(ctx context.Context, fromMs, toMs int64) (Aggregate, error)
 	TopModelsBetween(ctx context.Context, fromMs, toMs int64, limit int) ([]ModelStat, error)
@@ -60,9 +62,10 @@ func (r *repository) InsertBatch(ctx context.Context, events []model.UsageEvent)
 		auth_type, auth_index, source, source_hash, api_key_hash,
 		account_snapshot, auth_label_snapshot, auth_file_snapshot, auth_provider_snapshot, auth_project_id_snapshot, auth_snapshot_at_ms,
 		requested_model, resolved_model, reasoning_effort, service_tier,
-		input_tokens, output_tokens, reasoning_tokens, cached_tokens, cache_tokens, cache_read_tokens, cache_creation_tokens, total_tokens,
+		input_tokens, output_tokens, reasoning_tokens, cached_tokens, cache_tokens, cache_read_tokens, cache_creation_tokens,
+		cache_input_mode, billable_input_tokens, normalized_total_input_tokens, total_tokens,
 		latency_ms, ttft_ms, failed, fail_status_code, fail_summary, fail_body, raw_json, created_at_ms
-	) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+	) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
 	if err != nil {
 		return model.InsertResult{}, err
 	}
@@ -70,6 +73,20 @@ func (r *repository) InsertBatch(ctx context.Context, events []model.UsageEvent)
 
 	result := model.InsertResult{}
 	for _, event := range events {
+		if event.CacheInputMode == "" {
+			accounting := usage.NormalizeCacheAccounting(usage.CacheInputContext{
+				ExplicitMode:     usage.CacheInputModeFromRawJSON(event.RawJSON),
+				ExecutorType:     event.ExecutorType,
+				Provider:         event.Provider,
+				ProviderSnapshot: event.AuthProviderSnapshot,
+				ResolvedModel:    event.ResolvedModel,
+				RequestedModel:   event.RequestedModel,
+				DisplayModel:     event.Model,
+			}, event.InputTokens, event.CachedTokens, event.CacheTokens, event.CacheReadTokens, event.CacheCreationTokens)
+			event.CacheInputMode = accounting.Mode
+			event.BillableInputTokens = accounting.UncachedInputTokens
+			event.NormalizedTotalInputTokens = accounting.TotalInputTokens
+		}
 		failed := 0
 		if event.Failed {
 			failed = 1
@@ -114,6 +131,9 @@ func (r *repository) InsertBatch(ctx context.Context, events []model.UsageEvent)
 			event.CacheTokens,
 			event.CacheReadTokens,
 			event.CacheCreationTokens,
+			event.CacheInputMode,
+			event.BillableInputTokens,
+			event.NormalizedTotalInputTokens,
 			event.TotalTokens,
 			nullInt(event.LatencyMS),
 			nullInt(event.TTFTMS),
@@ -149,7 +169,8 @@ func (r *repository) ListRecent(ctx context.Context, limit int) ([]model.UsageEv
 		auth_type, auth_index, source, source_hash, api_key_hash,
 		account_snapshot, auth_label_snapshot, auth_file_snapshot, auth_provider_snapshot, auth_project_id_snapshot, auth_snapshot_at_ms,
 		requested_model, resolved_model, reasoning_effort, service_tier,
-		input_tokens, output_tokens, reasoning_tokens, cached_tokens, cache_tokens, cache_read_tokens, cache_creation_tokens, total_tokens,
+		input_tokens, output_tokens, reasoning_tokens, cached_tokens, cache_tokens, cache_read_tokens, cache_creation_tokens,
+		cache_input_mode, billable_input_tokens, normalized_total_input_tokens, total_tokens,
 		latency_ms, ttft_ms, failed, fail_status_code, fail_summary, created_at_ms
 		from usage_events
 		order by timestamp_ms desc, id desc
@@ -162,7 +183,7 @@ func (r *repository) ListRecent(ctx context.Context, limit int) ([]model.UsageEv
 	events := make([]model.UsageEvent, 0)
 	for rows.Next() {
 		var event model.UsageEvent
-		var requestID, provider, executorType, endpoint, method, path, authType, authIndex, source, sourceHash, apiKeyHash, accountSnapshot, authLabelSnapshot, authFileSnapshot, authProviderSnapshot, authProjectIDSnapshot, requestedModel, resolvedModel, reasoningEffort, serviceTier, failSummary sql.NullString
+		var requestID, provider, executorType, endpoint, method, path, authType, authIndex, source, sourceHash, apiKeyHash, accountSnapshot, authLabelSnapshot, authFileSnapshot, authProviderSnapshot, authProjectIDSnapshot, requestedModel, resolvedModel, reasoningEffort, serviceTier, cacheInputMode, failSummary sql.NullString
 		var authSnapshotAt sql.NullInt64
 		var latency, ttft sql.NullInt64
 		var failStatusCode sql.NullInt64
@@ -200,6 +221,9 @@ func (r *repository) ListRecent(ctx context.Context, limit int) ([]model.UsageEv
 			&event.CacheTokens,
 			&event.CacheReadTokens,
 			&event.CacheCreationTokens,
+			&cacheInputMode,
+			&event.BillableInputTokens,
+			&event.NormalizedTotalInputTokens,
 			&event.TotalTokens,
 			&latency,
 			&ttft,
@@ -230,6 +254,7 @@ func (r *repository) ListRecent(ctx context.Context, limit int) ([]model.UsageEv
 		event.ResolvedModel = resolvedModel.String
 		event.ReasoningEffort = reasoningEffort.String
 		event.ServiceTier = serviceTier.String
+		event.CacheInputMode = cacheInputMode.String
 		if authSnapshotAt.Valid {
 			event.AuthSnapshotAtMS = authSnapshotAt.Int64
 		}

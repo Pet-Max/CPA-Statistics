@@ -88,11 +88,16 @@ func (h *Handler) handleSync(w http.ResponseWriter, r *http.Request) {
 		response.Error(w, response.ModelPriceErrorStatus(err), err)
 		return
 	}
+	candidates, err := h.App.Store.UsageEvents.ModelPriceMigrationCandidates(r.Context(), prices)
+	if err != nil {
+		response.Error(w, http.StatusInternalServerError, err)
+		return
+	}
 	response.JSON(w, http.StatusOK, model.ModelPriceSyncResponse{
 		Prices:     prices,
 		Imported:   0,
 		Skipped:    0,
-		Candidates: []model.ModelPriceSyncCandidateSet{},
+		Candidates: candidates,
 		Unmatched:  unmatchedModels(req.Models, prices),
 		SourceResults: []model.ModelPriceSyncSourceResult{{
 			Source:  "local",

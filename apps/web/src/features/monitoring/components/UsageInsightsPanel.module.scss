@@ -334,14 +334,16 @@
 
 .healthGrid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, calc((100% - 68px) / 2)));
+  justify-content: space-evenly;
+  column-gap: 16px;
+  row-gap: 8px;
 }
 
 .healthMetric {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 
   span {
     color: var(--app-text-muted);
@@ -351,7 +353,7 @@
   }
 
   strong {
-    min-height: 82px;
+    min-height: 84px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -366,6 +368,7 @@
 .healthGood { color: var(--success-color); }
 .healthBad { color: var(--danger-color); }
 .healthLatency { color: var(--warning-color); }
+.healthFirstToken { color: var(--info-color); }
 
 .tokenList {
   display: flex;
@@ -563,7 +566,8 @@
   }
 
   .healthGrid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
   }
 
   .tokenList,

@@ -1194,6 +1194,7 @@
     "sync_model_count": "{{count}} 个模型参与同步",
     "manual_title": "手动价格",
     "manual_hint": "保存时使用本地模型名作为 key；手动保存标记为 manual，确认候选时会保留实际价格来源和来源模型 ID。",
+    "aliases": "别名",
     "search_placeholder": "搜索模型或来源",
     "filter_all": "全部",
     "filter_missing": "缺价格",
@@ -1216,6 +1217,7 @@
     "traffic_trend": "流量趋势",
     "traffic_desc": "请求量与 Token 量随筛选范围变化。",
     "request_health": "请求健康",
+    "first_token": "首字",
     "token_mix": "Token 构成",
     "token_desc": "输入、输出、推理与缓存 Token 的构成。"
   },

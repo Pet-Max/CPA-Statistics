@@ -174,10 +174,17 @@ export const buildMonitoringSummary = (rows: MonitoringEventRow[]): MonitoringSu
 
   let latencySum = 0;
   let latencyCount = 0;
+  let ttftSum = 0;
+  let ttftCount = 0;
   rows.forEach((row) => {
-    if (row.latencyMs === null) return;
-    latencySum += row.latencyMs;
-    latencyCount += 1;
+    if (row.latencyMs !== null) {
+      latencySum += row.latencyMs;
+      latencyCount += 1;
+    }
+    if (row.ttftMs !== null && row.ttftMs !== 0) {
+      ttftSum += row.ttftMs;
+      ttftCount += 1;
+    }
   });
 
   const taskMap = new Map<string, boolean>();
@@ -213,6 +220,7 @@ export const buildMonitoringSummary = (rows: MonitoringEventRow[]): MonitoringSu
     totalTokens,
     totalCost,
     averageLatencyMs: latencyCount > 0 ? latencySum / latencyCount : null,
+    averageTTFTMs: ttftCount > 0 ? ttftSum / ttftCount : null,
     rpm30m: recentRows.length / 30,
     tpm30m: recentTokens / 30,
     avgDailyRequests: totalCalls / activeDayCount,

@@ -120,7 +120,11 @@ export function ModelPricesPage({ embedded = false, dataPageLayout = false }: Mo
   };
 
   const handleConfirmCandidate = async (model: string, candidate: ModelPriceSyncCandidate) => {
-    await setModelPrices(applyCandidatePrice(modelPrices, model, candidate));
+    const next = applyCandidatePrice(modelPrices, model, candidate);
+    if (candidate.reason === 'legacy_alias_price' && candidate.sourceModelId !== model) {
+      delete next[candidate.sourceModelId];
+    }
+    await setModelPrices(next);
     setSyncResult((previous) =>
       previous
         ? {
@@ -316,6 +320,11 @@ export function ModelPricesPage({ embedded = false, dataPageLayout = false }: Mo
                             <span>{t('model_prices.needs_confirmation')}</span>
                           ) : !row.hasPrice ? (
                             <span>{t('model_prices.no_price')}</span>
+                          ) : null}
+                          {row.aliases.length > 0 ? (
+                            <small>
+                              {t('model_prices.aliases')}: {row.aliases.join(', ')}
+                            </small>
                           ) : null}
                         </div>
                       </td>

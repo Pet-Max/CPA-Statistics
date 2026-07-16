@@ -324,6 +324,10 @@ export function UsageInsightsPanel({
               <span>{t('dashboard.avg_latency')}</span>
               <strong className={styles.healthLatency}>{formatDurationMs(summary.averageLatencyMs, { locale })}</strong>
             </div>
+            <div className={styles.healthMetric}>
+              <span>{t('usage_page.first_token', { defaultValue: '首字' })}</span>
+              <strong className={styles.healthFirstToken}>{formatDurationMs(summary.averageTTFTMs, { locale })}</strong>
+            </div>
           </div>
         </article>
 

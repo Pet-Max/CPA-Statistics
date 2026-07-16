@@ -1,6 +1,11 @@
 services:
   cpa-statistics:
-    image: petmax/cpa-statistics:latest
+    image: cpa-statistics:v1.0.3
+    build:
+      context: .
+      dockerfile: Dockerfile.manager-server
+      args:
+        VERSION: v1.0.3
     restart: unless-stopped
     ports:
       - "8318:8318"

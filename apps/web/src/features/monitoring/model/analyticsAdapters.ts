@@ -346,6 +346,7 @@ export const buildSummaryFromAnalytics = (
   totalTokens: summary.total_tokens,
   totalCost: summary.total_cost,
   averageLatencyMs: summary.average_latency_ms,
+  averageTTFTMs: summary.average_ttft_ms,
   rpm30m: summary.rpm_30m,
   tpm30m: summary.tpm_30m,
   avgDailyRequests: summary.avg_daily_requests,

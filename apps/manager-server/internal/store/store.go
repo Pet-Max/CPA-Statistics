@@ -55,11 +55,11 @@ type EventsPage = usageevent.EventsPage
 type Store struct {
 	db *sql.DB
 
-	Settings         setting.Repository
-	UsageEvents      usageevent.Repository
-	DeadLetters      deadletter.Repository
-	ModelPrices      modelprice.Repository
-	APIKeyAliases    apikeyalias.Repository
+	Settings      setting.Repository
+	UsageEvents   usageevent.Repository
+	DeadLetters   deadletter.Repository
+	ModelPrices   modelprice.Repository
+	APIKeyAliases apikeyalias.Repository
 }
 
 func Open(path string, protector ...*security.Protector) (*Store, error) {
@@ -67,17 +67,21 @@ func Open(path string, protector ...*security.Protector) (*Store, error) {
 	if err != nil {
 		return nil, err
 	}
+	if _, err := usageevent.New(db).BackfillCacheAccounting(context.Background(), 500); err != nil {
+		_ = db.Close()
+		return nil, err
+	}
 	return New(db, protector...), nil
 }
 
 func New(db *sql.DB, protector ...*security.Protector) *Store {
 	return &Store{
-		db:               db,
-		Settings:         setting.New(db, protector...),
-		UsageEvents:      usageevent.New(db),
-		DeadLetters:      deadletter.New(db),
-		ModelPrices:      modelprice.New(db),
-		APIKeyAliases:    apikeyalias.New(db),
+		db:            db,
+		Settings:      setting.New(db, protector...),
+		UsageEvents:   usageevent.New(db),
+		DeadLetters:   deadletter.New(db),
+		ModelPrices:   modelprice.New(db),
+		APIKeyAliases: apikeyalias.New(db),
 	}
 }
 

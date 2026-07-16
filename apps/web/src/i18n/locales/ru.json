@@ -1190,6 +1190,7 @@
     "sync_model_count": "{{count}} models in sync scope",
     "manual_title": "Manual Pricing",
     "manual_hint": "Saved prices use the local model name as the key; manual saves are marked manual, while confirmed candidates keep their actual source and source model ID.",
+    "aliases": "Псевдонимы",
     "search_placeholder": "Search models or sources",
     "filter_all": "All",
     "filter_missing": "Missing",
@@ -1212,6 +1213,7 @@
     "traffic_trend": "Тренд трафика",
     "traffic_desc": "Запросы и токены меняются вместе с выбранным диапазоном.",
     "request_health": "Здоровье запросов",
+    "first_token": "Первый токен",
     "token_mix": "Состав токенов",
     "token_desc": "Разбивка входных, выходных, reasoning и кэшированных токенов."
   },

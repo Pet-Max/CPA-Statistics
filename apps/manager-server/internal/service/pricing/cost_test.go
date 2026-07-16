@@ -13,7 +13,7 @@ func TestCostForModelSeparatesCachedInputTokens(t *testing.T) {
 	}
 
 	cost := CostForModel("gpt-cached", ModelTokens{
-		InputTokens:  1_000_000,
+		InputTokens:  750_000,
 		OutputTokens: 500_000,
 		CachedTokens: 250_000,
 	}, prices)
@@ -29,7 +29,7 @@ func TestCostForModelDoesNotCreateNegativePromptCost(t *testing.T) {
 	}
 
 	cost := CostForModel("gpt-cached", ModelTokens{
-		InputTokens:  100_000,
+		InputTokens:  0,
 		CachedTokens: 250_000,
 	}, prices)
 
@@ -62,7 +62,7 @@ func TestCostForModelPricesResidualCompatCachedWithFineGrainedCache(t *testing.T
 	}
 
 	cost := CostForModel("mixed-cache", ModelTokens{
-		InputTokens:         1_000_000,
+		InputTokens:         900_000,
 		CachedTokens:        100_000,
 		CacheReadTokens:     200_000,
 		CacheCreationTokens: 100_000,

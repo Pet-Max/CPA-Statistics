@@ -316,8 +316,8 @@ func TestNormalizeRawFallbackTotalIncludesFineGrainedCache(t *testing.T) {
 	if err != nil {
 		t.Fatalf("normalize fallback total: %v", err)
 	}
-	if event.TotalTokens != 43 {
-		t.Fatalf("total tokens = %d, want 43", event.TotalTokens)
+	if event.TotalTokens != 33 {
+		t.Fatalf("total tokens = %d, want 33", event.TotalTokens)
 	}
 }
 

@@ -22,6 +22,7 @@ export type ModelPriceRow = {
   hasPrice: boolean;
   price?: ModelPrice;
   candidateCount: number;
+  aliases: string[];
 };
 
 export type ModelPriceSummary = {
@@ -76,10 +77,17 @@ export const buildSyncPriceModelsFromUsage = (
   usage: UsagePayload | null,
   prices: Record<string, ModelPrice>
 ) => {
-  const models = new Set<string>(Object.keys(prices));
-  collectUsageDetailsWithEndpoint(usage).forEach((detail) => {
-    if (detail.__modelName) models.add(detail.__modelName);
-    if (detail.__resolvedModel) models.add(detail.__resolvedModel);
+  const details = collectUsageDetailsWithEndpoint(usage);
+  const legacyAliases = new Set<string>();
+  const models = new Set<string>();
+  details.forEach((detail) => {
+    const requested = detail.__modelName;
+    const billingModel = detail.__resolvedModel || requested;
+    if (billingModel) models.add(billingModel);
+    if (requested && billingModel && requested !== billingModel) legacyAliases.add(requested);
+  });
+  Object.keys(prices).forEach((model) => {
+    if (!legacyAliases.has(model)) models.add(model);
   });
   return Array.from(models)
     .filter(Boolean)
@@ -102,6 +110,8 @@ export const buildModelPriceRows = (
 ): ModelPriceRow[] => {
   const rowMap = new Map<string, ModelPriceRow>();
   const candidateMap = buildCandidateMap(candidateSets);
+  const details = collectUsageDetailsWithEndpoint(usage);
+  const legacyAliases = new Set<string>();
 
   const ensureRow = (model: string): ModelPriceRow => {
     const existing = rowMap.get(model);
@@ -115,34 +125,40 @@ export const buildModelPriceRows = (
       hasPrice: Boolean(price),
       price,
       candidateCount: candidateMap.get(model)?.length ?? 0,
+      aliases: [],
     };
     rowMap.set(model, row);
     return row;
   };
 
-  Object.keys(prices).forEach(ensureRow);
-  candidateMap.forEach((_candidates, model) => ensureRow(model));
-
-  collectUsageDetailsWithEndpoint(usage).forEach((detail) => {
-    if (detail.__modelName) {
-      const row = ensureRow(detail.__modelName);
-      row.calls += 1;
-      row.requestedCalls += 1;
-    }
-    if (detail.__resolvedModel && detail.__resolvedModel !== detail.__modelName) {
-      const row = ensureRow(detail.__resolvedModel);
-      row.calls += 1;
+  details.forEach((detail) => {
+    const requested = detail.__modelName;
+    const billingModel = detail.__resolvedModel || requested;
+    if (!billingModel) return;
+    const row = ensureRow(billingModel);
+    row.calls += 1;
+    row.requestedCalls += 1;
+    if (requested && requested !== billingModel) {
       row.resolvedCalls += 1;
+      legacyAliases.add(requested);
+      if (!row.aliases.includes(requested)) row.aliases.push(requested);
     }
   });
 
-  return Array.from(rowMap.values()).sort(
-    (left, right) =>
-      Number(left.hasPrice) - Number(right.hasPrice) ||
-      right.candidateCount - left.candidateCount ||
-      right.calls - left.calls ||
-      left.model.localeCompare(right.model)
-  );
+  Object.keys(prices)
+    .filter((model) => !legacyAliases.has(model))
+    .forEach(ensureRow);
+  candidateMap.forEach((_candidates, model) => ensureRow(model));
+
+  return Array.from(rowMap.values())
+    .map((row) => ({ ...row, aliases: row.aliases.sort((left, right) => left.localeCompare(right)) }))
+    .sort(
+      (left, right) =>
+        Number(left.hasPrice) - Number(right.hasPrice) ||
+        right.candidateCount - left.candidateCount ||
+        right.calls - left.calls ||
+        left.model.localeCompare(right.model)
+    );
 };
 
 export const buildModelPriceSummary = (rows: ModelPriceRow[]): ModelPriceSummary => {
@@ -169,6 +185,7 @@ export const filterModelPriceRows = (
     if (!query) return true;
     return (
       row.model.toLowerCase().includes(query) ||
+      row.aliases.some((alias) => alias.toLowerCase().includes(query)) ||
       row.price?.sourceModelId?.toLowerCase().includes(query) ||
       row.price?.source?.toLowerCase().includes(query)
     );

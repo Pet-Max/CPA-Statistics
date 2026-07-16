@@ -54,6 +54,7 @@ type ChannelModelStat struct {
 	SuccessCalls         int64
 	FailureCalls         int64
 	InputTokens          int64
+	BillableInputTokens  int64
 	OutputTokens         int64
 	CachedTokens         int64
 	CacheReadTokens      int64
@@ -88,6 +89,7 @@ type AccountModelStat struct {
 	SuccessCalls         int64
 	FailureCalls         int64
 	InputTokens          int64
+	BillableInputTokens  int64
 	OutputTokens         int64
 	CachedTokens         int64
 	CacheReadTokens      int64
@@ -112,6 +114,7 @@ type APIKeyModelStat struct {
 	SuccessCalls         int64
 	FailureCalls         int64
 	InputTokens          int64
+	BillableInputTokens  int64
 	OutputTokens         int64
 	CachedTokens         int64
 	CacheReadTokens      int64
@@ -191,6 +194,7 @@ func (r *repository) AggregateWithFilter(ctx context.Context, filter AnalyticsFi
 	sum(case when failed = 0 then 1 else 0 end),
 	sum(case when failed = 1 then 1 else 0 end),
 	coalesce(sum(input_tokens), 0),
+	coalesce(sum(billable_input_tokens), 0),
 	coalesce(sum(output_tokens), 0),
 	coalesce(sum(reasoning_tokens), 0),
 	coalesce(sum(`+compatCachedExpr+`), 0),
@@ -198,6 +202,7 @@ func (r *repository) AggregateWithFilter(ctx context.Context, filter AnalyticsFi
 	coalesce(sum(cache_creation_tokens), 0),
 	coalesce(sum(total_tokens), 0),
 	avg(nullif(latency_ms, 0)),
+	avg(nullif(ttft_ms, 0)),
 	coalesce(sum(case when total_tokens = 0 and failed = 0 then 1 else 0 end), 0)
 from usage_events `+where, args...)
 
@@ -208,6 +213,7 @@ from usage_events `+where, args...)
 		&success,
 		&failure,
 		&agg.InputTokens,
+		&agg.BillableInputTokens,
 		&agg.OutputTokens,
 		&agg.ReasoningTokens,
 		&agg.CachedTokens,
@@ -215,6 +221,7 @@ from usage_events `+where, args...)
 		&agg.CacheCreationTokens,
 		&agg.TotalTokens,
 		&agg.AvgLatencyMS,
+		&agg.AvgTTFTMS,
 		&agg.ZeroTokenCalls,
 	); err != nil {
 		return Aggregate{}, err
@@ -232,6 +239,7 @@ func (r *repository) ModelStatsWithFilter(ctx context.Context, filter AnalyticsF
 	count(*) as calls,
 	sum(case when failed = 0 then 1 else 0 end) as success,
 	coalesce(sum(input_tokens), 0),
+	coalesce(sum(billable_input_tokens), 0),
 	coalesce(sum(output_tokens), 0),
 	coalesce(sum(reasoning_tokens), 0),
 	coalesce(sum(` + compatCachedExpr + `), 0),
@@ -258,6 +266,7 @@ select
 	count(*) as calls,
 	sum(case when f.failed = 0 then 1 else 0 end) as success,
 	coalesce(sum(f.input_tokens), 0),
+	coalesce(sum(f.billable_input_tokens), 0),
 	coalesce(sum(f.output_tokens), 0),
 	coalesce(sum(f.reasoning_tokens), 0),
 	coalesce(sum(` + compatCachedFExpr + `), 0),
@@ -285,6 +294,7 @@ order by max(t.model_calls) desc, f.model, calls desc`
 			&stat.Calls,
 			&stat.SuccessCalls,
 			&stat.InputTokens,
+			&stat.BillableInputTokens,
 			&stat.OutputTokens,
 			&stat.ReasoningTokens,
 			&stat.CachedTokens,
@@ -372,6 +382,7 @@ func (r *repository) ChannelModelStatsWithFilter(ctx context.Context, filter Ana
 	sum(case when failed = 0 then 1 else 0 end),
 	sum(case when failed = 1 then 1 else 0 end),
 	coalesce(sum(input_tokens), 0),
+	coalesce(sum(billable_input_tokens), 0),
 	coalesce(sum(output_tokens), 0),
 	coalesce(sum(`+compatCachedExpr+`), 0),
 	coalesce(sum(cache_read_tokens), 0),
@@ -401,6 +412,7 @@ order by count(*) desc`, args...)
 			&stat.SuccessCalls,
 			&stat.FailureCalls,
 			&stat.InputTokens,
+			&stat.BillableInputTokens,
 			&stat.OutputTokens,
 			&stat.CachedTokens,
 			&stat.CacheReadTokens,
@@ -474,6 +486,7 @@ func (r *repository) AccountModelStatsWithFilter(ctx context.Context, filter Ana
 	sum(case when failed = 0 then 1 else 0 end),
 	sum(case when failed = 1 then 1 else 0 end),
 	coalesce(sum(input_tokens), 0),
+	coalesce(sum(billable_input_tokens), 0),
 	coalesce(sum(output_tokens), 0),
 	coalesce(sum(`+compatCachedExpr+`), 0),
 	coalesce(sum(cache_read_tokens), 0),
@@ -506,6 +519,7 @@ order by max(timestamp_ms) desc, count(*) desc`, args...)
 			&stat.SuccessCalls,
 			&stat.FailureCalls,
 			&stat.InputTokens,
+			&stat.BillableInputTokens,
 			&stat.OutputTokens,
 			&stat.CachedTokens,
 			&stat.CacheReadTokens,
@@ -538,6 +552,7 @@ func (r *repository) APIKeyModelStatsWithFilter(ctx context.Context, filter Anal
 	sum(case when failed = 0 then 1 else 0 end),
 	sum(case when failed = 1 then 1 else 0 end),
 	coalesce(sum(input_tokens), 0),
+	coalesce(sum(billable_input_tokens), 0),
 	coalesce(sum(output_tokens), 0),
 	coalesce(sum(`+compatCachedExpr+`), 0),
 	coalesce(sum(cache_read_tokens), 0),
@@ -571,6 +586,7 @@ order by max(timestamp_ms) desc, count(*) desc`, args...)
 			&stat.SuccessCalls,
 			&stat.FailureCalls,
 			&stat.InputTokens,
+			&stat.BillableInputTokens,
 			&stat.OutputTokens,
 			&stat.CachedTokens,
 			&stat.CacheReadTokens,

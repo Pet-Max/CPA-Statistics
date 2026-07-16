@@ -45,6 +45,9 @@ func Migrate(db *sql.DB) error {
 			cache_tokens integer not null default 0,
 			cache_read_tokens integer not null default 0,
 			cache_creation_tokens integer not null default 0,
+			cache_input_mode text not null default '',
+			billable_input_tokens integer not null default 0,
+			normalized_total_input_tokens integer not null default 0,
 			total_tokens integer not null default 0,
 			latency_ms integer,
 			ttft_ms integer,
@@ -142,6 +145,9 @@ func ensureUsageEventSnapshotColumns(db *sql.DB) error {
 		{name: "service_tier", definition: "text"},
 		{name: "cache_read_tokens", definition: "integer not null default 0"},
 		{name: "cache_creation_tokens", definition: "integer not null default 0"},
+		{name: "cache_input_mode", definition: "text not null default ''"},
+		{name: "billable_input_tokens", definition: "integer not null default 0"},
+		{name: "normalized_total_input_tokens", definition: "integer not null default 0"},
 		{name: "ttft_ms", definition: "integer"},
 		{name: "fail_status_code", definition: "integer"},
 		{name: "fail_summary", definition: "text"},
@@ -159,7 +165,8 @@ func ensureUsageEventSnapshotColumns(db *sql.DB) error {
 			return err
 		}
 	}
-	return nil
+	_, err = db.Exec(`create index if not exists idx_usage_events_cache_accounting on usage_events(cache_input_mode, id)`)
+	return err
 }
 
 func ensureModelPriceColumns(db *sql.DB) error {

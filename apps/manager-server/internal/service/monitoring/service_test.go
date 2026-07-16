@@ -187,6 +187,67 @@ func TestAnalyticsExposesCPA7118UsageFields(t *testing.T) {
 	}
 }
 
+func TestAnalyticsSummaryAverageTTFTUsesSelectedScope(t *testing.T) {
+	db := newMonitoringTestStore(t)
+	ctx := context.Background()
+	weekStartMS := int64(1_778_000_000_000)
+	dayMS := int64(24 * time.Hour / time.Millisecond)
+	todayStartMS := weekStartMS + 6*dayMS
+	weekEndMS := weekStartMS + 7*dayMS
+	weekTTFT := int64(300)
+	todayTTFT := int64(120)
+	zeroTTFT := int64(0)
+	otherModelTTFT := int64(700)
+
+	weekEvent := monitoringEvent("ttft-week", weekStartMS+60*60*1000, "gpt-a", "auth-1", "source-a", false, 1, 1, 0, 0, 2, nil)
+	weekEvent.TTFTMS = &weekTTFT
+	todayEvent := monitoringEvent("ttft-today", todayStartMS+60*60*1000, "gpt-a", "auth-1", "source-a", false, 1, 1, 0, 0, 2, nil)
+	todayEvent.TTFTMS = &todayTTFT
+	zeroEvent := monitoringEvent("ttft-zero", todayStartMS+2*60*60*1000, "gpt-a", "auth-1", "source-a", false, 1, 1, 0, 0, 2, nil)
+	zeroEvent.TTFTMS = &zeroTTFT
+	otherModelEvent := monitoringEvent("ttft-other-model", todayStartMS+3*60*60*1000, "gpt-b", "auth-2", "source-b", false, 1, 1, 0, 0, 2, nil)
+	otherModelEvent.TTFTMS = &otherModelTTFT
+	noSampleEvent := monitoringEvent("ttft-no-sample", todayStartMS+4*60*60*1000, "gpt-c", "auth-3", "source-c", false, 1, 1, 0, 0, 2, nil)
+	noSampleEvent.TTFTMS = &zeroTTFT
+
+	if _, err := db.InsertEvents(ctx, []usage.Event{weekEvent, todayEvent, zeroEvent, otherModelEvent, noSampleEvent}); err != nil {
+		t.Fatalf("insert events: %v", err)
+	}
+
+	summaryFor := func(fromMS, toMS int64, models []string) *Summary {
+		resp, err := New(db).Analytics(ctx, Request{
+			FromMS: fromMS,
+			ToMS:   toMS,
+			Filters: Filters{
+				Models: models,
+			},
+			Include: Include{Summary: true},
+		})
+		if err != nil {
+			t.Fatalf("analytics: %v", err)
+		}
+		if resp.Summary == nil {
+			t.Fatal("summary is nil")
+		}
+		return resp.Summary
+	}
+
+	todaySummary := summaryFor(todayStartMS, weekEndMS, []string{"gpt-a"})
+	if todaySummary.AverageTTFTMS == nil || math.Abs(*todaySummary.AverageTTFTMS-120) > 0.000001 {
+		t.Fatalf("today average TTFT = %#v", todaySummary.AverageTTFTMS)
+	}
+
+	weekSummary := summaryFor(weekStartMS, weekEndMS, []string{"gpt-a"})
+	if weekSummary.AverageTTFTMS == nil || math.Abs(*weekSummary.AverageTTFTMS-210) > 0.000001 {
+		t.Fatalf("week average TTFT = %#v", weekSummary.AverageTTFTMS)
+	}
+
+	noSampleSummary := summaryFor(todayStartMS, weekEndMS, []string{"gpt-c"})
+	if noSampleSummary.AverageTTFTMS != nil {
+		t.Fatalf("missing TTFT average = %#v", noSampleSummary.AverageTTFTMS)
+	}
+}
+
 func TestAnalyticsKeepsCompatCachedSeparateFromFineGrainedCache(t *testing.T) {
 	db := newMonitoringTestStore(t)
 	ctx := context.Background()

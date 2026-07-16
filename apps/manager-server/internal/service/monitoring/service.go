@@ -104,6 +104,7 @@ type Summary struct {
 	TotalTokens           int64    `json:"total_tokens"`
 	TotalCost             float64  `json:"total_cost"`
 	AverageLatencyMS      *float64 `json:"average_latency_ms"`
+	AverageTTFTMS         *float64 `json:"average_ttft_ms"`
 	ZeroTokenCalls        int64    `json:"zero_token_calls"`
 	RPM30M                float64  `json:"rpm_30m"`
 	TPM30M                float64  `json:"tpm_30m"`
@@ -570,6 +571,7 @@ func buildSummary(agg store.Aggregate, rolling store.Aggregate, activeDays int64
 		TotalTokens:           agg.TotalTokens,
 		TotalCost:             sumCost(modelStats, prices),
 		AverageLatencyMS:      nullableFloat(agg.AvgLatencyMS.Valid, agg.AvgLatencyMS.Float64),
+		AverageTTFTMS:         nullableFloat(agg.AvgTTFTMS.Valid, agg.AvgTTFTMS.Float64),
 		ZeroTokenCalls:        agg.ZeroTokenCalls,
 		RPM30M:                float64(rolling.TotalCalls) / 30,
 		TPM30M:                float64(rolling.TotalTokens) / 30,
@@ -643,7 +645,7 @@ func timelineBucketStart(timestampMS int64, granularity string, fromMS int64) in
 	if granularity == "day" {
 		anchorMS = fromMS
 	}
-	return ((timestampMS - anchorMS) / bucketSize) * bucketSize + anchorMS
+	return ((timestampMS-anchorMS)/bucketSize)*bucketSize + anchorMS
 }
 
 func buildHourly(points []store.HourlyPoint) []HourlyPoint {
@@ -1255,7 +1257,7 @@ func costForStat(stat store.ModelStat, prices map[string]store.ModelPrice) float
 		model = stat.Model
 	}
 	return pricing.CostForModel(model, pricing.ModelTokens{
-		InputTokens:         stat.InputTokens,
+		InputTokens:         stat.BillableInputTokens,
 		OutputTokens:        stat.OutputTokens,
 		CachedTokens:        stat.CachedTokens,
 		CacheReadTokens:     stat.CacheReadTokens,
@@ -1269,7 +1271,7 @@ func costForChannelStat(stat store.ChannelModelStat, prices map[string]store.Mod
 		model = stat.Model
 	}
 	return pricing.CostForModel(model, pricing.ModelTokens{
-		InputTokens:         stat.InputTokens,
+		InputTokens:         stat.BillableInputTokens,
 		OutputTokens:        stat.OutputTokens,
 		CachedTokens:        stat.CachedTokens,
 		CacheReadTokens:     stat.CacheReadTokens,
@@ -1283,7 +1285,7 @@ func costForAccountModelStat(stat store.AccountModelStat, prices map[string]stor
 		model = stat.Model
 	}
 	return pricing.CostForModel(model, pricing.ModelTokens{
-		InputTokens:         stat.InputTokens,
+		InputTokens:         stat.BillableInputTokens,
 		OutputTokens:        stat.OutputTokens,
 		CachedTokens:        stat.CachedTokens,
 		CacheReadTokens:     stat.CacheReadTokens,
@@ -1297,7 +1299,7 @@ func costForAPIKeyModelStat(stat store.APIKeyModelStat, prices map[string]store.
 		model = stat.Model
 	}
 	return pricing.CostForModel(model, pricing.ModelTokens{
-		InputTokens:         stat.InputTokens,
+		InputTokens:         stat.BillableInputTokens,
 		OutputTokens:        stat.OutputTokens,
 		CachedTokens:        stat.CachedTokens,
 		CacheReadTokens:     stat.CacheReadTokens,

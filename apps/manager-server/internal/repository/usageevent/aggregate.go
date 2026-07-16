@@ -11,6 +11,7 @@ type Aggregate struct {
 	SuccessCalls        int64
 	FailureCalls        int64
 	InputTokens         int64
+	BillableInputTokens int64
 	OutputTokens        int64
 	ReasoningTokens     int64
 	CachedTokens        int64
@@ -18,6 +19,7 @@ type Aggregate struct {
 	CacheCreationTokens int64
 	TotalTokens         int64
 	AvgLatencyMS        sql.NullFloat64
+	AvgTTFTMS           sql.NullFloat64
 	ZeroTokenCalls      int64
 }
 
@@ -28,6 +30,7 @@ type ModelStat struct {
 	Calls               int64
 	SuccessCalls        int64
 	InputTokens         int64
+	BillableInputTokens int64
 	OutputTokens        int64
 	ReasoningTokens     int64
 	CachedTokens        int64
@@ -59,6 +62,7 @@ const aggregateSQL = `select
 	sum(case when failed = 0 then 1 else 0 end),
 	sum(case when failed = 1 then 1 else 0 end),
 	coalesce(sum(input_tokens), 0),
+	coalesce(sum(billable_input_tokens), 0),
 	coalesce(sum(output_tokens), 0),
 	coalesce(sum(reasoning_tokens), 0),
 	coalesce(sum(max(max(cached_tokens, cache_tokens) - max(cache_read_tokens, 0) - max(cache_creation_tokens, 0), 0)), 0),
@@ -80,6 +84,7 @@ func (r *repository) AggregateBetween(ctx context.Context, fromMs, toMs int64) (
 		&success,
 		&failure,
 		&agg.InputTokens,
+		&agg.BillableInputTokens,
 		&agg.OutputTokens,
 		&agg.ReasoningTokens,
 		&agg.CachedTokens,
@@ -112,6 +117,7 @@ select
 	count(*) as calls,
 	sum(case when e.failed = 0 then 1 else 0 end) as success,
 	coalesce(sum(e.input_tokens), 0),
+	coalesce(sum(e.billable_input_tokens), 0),
 	coalesce(sum(e.output_tokens), 0),
 	coalesce(sum(e.reasoning_tokens), 0),
 	coalesce(sum(max(max(e.cached_tokens, e.cache_tokens) - max(e.cache_read_tokens, 0) - max(e.cache_creation_tokens, 0), 0)), 0),
@@ -144,6 +150,7 @@ func (r *repository) TopModelsBetween(ctx context.Context, fromMs, toMs int64, l
 			&stat.Calls,
 			&stat.SuccessCalls,
 			&stat.InputTokens,
+			&stat.BillableInputTokens,
 			&stat.OutputTokens,
 			&stat.ReasoningTokens,
 			&stat.CachedTokens,
@@ -164,6 +171,7 @@ const modelStatsSQL = `select
 	count(*) as calls,
 	sum(case when failed = 0 then 1 else 0 end) as success,
 	coalesce(sum(input_tokens), 0),
+	coalesce(sum(billable_input_tokens), 0),
 	coalesce(sum(output_tokens), 0),
 	coalesce(sum(reasoning_tokens), 0),
 	coalesce(sum(max(max(cached_tokens, cache_tokens) - max(cache_read_tokens, 0) - max(cache_creation_tokens, 0), 0)), 0),
@@ -192,6 +200,7 @@ func (r *repository) ModelStatsBetween(ctx context.Context, fromMs, toMs int64) 
 			&stat.Calls,
 			&stat.SuccessCalls,
 			&stat.InputTokens,
+			&stat.BillableInputTokens,
 			&stat.OutputTokens,
 			&stat.ReasoningTokens,
 			&stat.CachedTokens,

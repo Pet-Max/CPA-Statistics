@@ -436,6 +436,7 @@ export interface MonitoringAnalyticsSummary {
   total_tokens: number;
   total_cost: number;
   average_latency_ms: number | null;
+  average_ttft_ms: number | null;
   zero_token_calls: number;
   rpm_30m: number;
   tpm_30m: number;

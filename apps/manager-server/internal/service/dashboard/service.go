@@ -667,7 +667,7 @@ func costForStat(stat store.ModelStat, prices map[string]store.ModelPrice) float
 		model = stat.Model
 	}
 	return pricing.CostForModel(model, pricing.ModelTokens{
-		InputTokens:         stat.InputTokens,
+		InputTokens:         stat.BillableInputTokens,
 		OutputTokens:        stat.OutputTokens,
 		CachedTokens:        stat.CachedTokens,
 		CacheReadTokens:     stat.CacheReadTokens,
@@ -681,7 +681,7 @@ func costForChannelStat(stat store.ChannelModelStat, prices map[string]store.Mod
 		model = stat.Model
 	}
 	return pricing.CostForModel(model, pricing.ModelTokens{
-		InputTokens:         stat.InputTokens,
+		InputTokens:         stat.BillableInputTokens,
 		OutputTokens:        stat.OutputTokens,
 		CachedTokens:        stat.CachedTokens,
 		CacheReadTokens:     stat.CacheReadTokens,

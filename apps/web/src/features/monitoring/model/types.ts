@@ -206,6 +206,7 @@ export type MonitoringSummary = {
   totalTokens: number;
   totalCost: number;
   averageLatencyMs: number | null;
+  averageTTFTMs: number | null;
   rpm30m: number;
   tpm30m: number;
   avgDailyRequests: number;
