@@ -15,7 +15,7 @@ export interface ManagerLatestRelease {
 }
 
 const CPA_MANAGER_LATEST_RELEASE_URL =
-  'https://api.github.com/repos/seakee/CPA-Statistics/releases/latest';
+  'https://api.github.com/repos/Pet-Max/CPA-Statistics/releases/latest';
 
 export const versionApi = {
   checkLatest: () => apiClient.get<Record<string, unknown>>('/latest-version'),
