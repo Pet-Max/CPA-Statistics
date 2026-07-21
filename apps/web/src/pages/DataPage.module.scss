@@ -1,180 +1,51 @@
 .page {
   --data-clay: color-mix(in srgb, var(--app-accent) 82%, #9d4f2e);
-  --data-sage: color-mix(in srgb, var(--success-color, #6f8d69) 62%, var(--app-accent));
+  --data-sage: color-mix(in srgb, var(--success-color, #6f8d69) 64%, var(--app-accent));
   --data-ochre: color-mix(in srgb, var(--warning-color, #b9822d) 72%, var(--app-accent));
-  --data-line: color-mix(in srgb, var(--glass-border) 74%, transparent);
-  --data-paper-highlight: color-mix(in srgb, var(--glass-bg) 74%, rgba(255, 244, 217, 0.48));
+  --data-line: color-mix(in srgb, var(--glass-border) 78%, transparent);
+  --data-paper-highlight: color-mix(in srgb, var(--glass-bg) 76%, rgba(255, 244, 217, 0.48));
   --data-ledger-line: color-mix(in srgb, var(--app-accent) 10%, transparent);
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  align-items: stretch;
-  gap: 20px;
-}
-
-.transferPanel,
-.modelPricesPanel {
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-paper-xl, 32px);
-  background: var(--glass-bg);
-  box-shadow: var(--shadow-paper-sm);
-  backdrop-filter: blur(var(--app-blur));
-  -webkit-backdrop-filter: blur(var(--app-blur));
-}
-
-.eyebrow {
-  width: fit-content;
-  margin: 0;
-  padding: 4px 9px 3px;
-  border: 1px solid color-mix(in srgb, var(--data-clay) 22%, var(--glass-border));
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--data-clay) 10%, var(--glass-bg));
-  color: var(--data-clay);
-  box-shadow: inset 0 1px 0 color-mix(in srgb, white 42%, transparent);
-  font-size: 11px;
-  font-weight: 900;
-  letter-spacing: 0.18em;
-  line-height: 1;
-  text-transform: uppercase;
-}
-
-.transferPanel {
-  position: relative;
-  grid-column: 1;
-  align-self: stretch;
-  display: flex;
-  flex-direction: column;
+  grid-template-columns: minmax(0, 1fr);
   gap: 18px;
-  height: 100%;
-  padding: clamp(18px, 2.4vw, 26px);
-  overflow: hidden;
-  background:
-    radial-gradient(circle at 92% 12%, color-mix(in srgb, var(--data-ochre) 17%, transparent) 0 92px, transparent 93px),
-    linear-gradient(135deg, var(--data-paper-highlight), var(--glass-bg) 58%);
-}
-
-.transferPanel::before,
-.transferPanel::after,
-.modelPricesPanel :global([data-model-prices-section='actions'])::before,
-.modelPricesPanel :global([data-model-prices-section='actions'])::after {
-  position: absolute;
-  pointer-events: none;
-  content: '';
-}
-
-.transferPanel::before,
-.modelPricesPanel :global([data-model-prices-section='actions'])::before {
-  inset: 0;
-  opacity: 0.48;
-  background-image:
-    linear-gradient(var(--data-ledger-line) 1px, transparent 1px),
-    linear-gradient(90deg, var(--data-ledger-line) 1px, transparent 1px);
-  background-size: 100% 34px, 34px 100%;
-  mask-image: linear-gradient(135deg, rgba(0, 0, 0, 0.72), transparent 68%);
-}
-
-.transferPanel::after,
-.modelPricesPanel :global([data-model-prices-section='actions'])::after {
-  top: 0;
-  right: 24px;
-  left: 24px;
-  height: 3px;
-  border-radius: 0 0 999px 999px;
-  background: linear-gradient(90deg, var(--data-clay), var(--data-ochre), var(--data-sage));
-  opacity: 0.76;
-}
-
-.panelHeader {
-  position: relative;
-  z-index: 1;
-
-  div {
-    display: flex;
-    flex-direction: column;
-    gap: 0;
-  }
-
-  h2 {
-    margin: 10px 0 7px;
-    color: var(--app-text-primary);
-    font-family: var(--font-display);
-    font-size: 25px;
-    letter-spacing: -0.02em;
-  }
-
-  p {
-    margin: 0;
-    color: var(--app-text-muted);
-    line-height: 1.55;
-  }
-}
-
-.panelBody {
-  margin: 0;
-}
-
-.panelFooter {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  margin-top: auto;
-  padding-top: 14px;
-  border-top: 1px solid color-mix(in srgb, var(--glass-border) 74%, transparent);
-  background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--glass-bg) 42%, transparent));
-
-  button {
-    flex: 1 1 auto;
-    min-width: 140px;
-    border-radius: 14px;
-    transition:
-      transform 160ms ease,
-      box-shadow 160ms ease,
-      border-color 160ms ease;
-
-    > span {
-      display: inline-flex;
-      align-items: center;
-      gap: 7px;
-    }
-
-    &:hover:not(:disabled) {
-      transform: translateY(-1px);
-      box-shadow: 0 10px 24px color-mix(in srgb, var(--app-accent) 12%, transparent);
-    }
-  }
-}
-
-.hiddenInput {
-  display: none;
 }
 
 .modelPricesPanel {
-  display: contents;
+  min-width: 0;
 
   :global([data-model-prices-layout='data-page']) {
-    display: contents;
+    display: grid;
+    min-width: 0;
+    gap: 18px;
   }
 
   :global([data-model-prices-section='actions']) {
     position: relative;
-    grid-column: 2;
-    align-self: stretch;
-    grid-template-columns: 1fr;
-    align-content: stretch;
-    align-items: stretch;
     min-width: 0;
-    height: 100%;
-    padding: clamp(18px, 2.4vw, 26px);
     overflow: hidden;
-    border-color: var(--glass-border);
+    padding: clamp(10px, 1.4vw, 14px);
+    border: 1px solid color-mix(in srgb, var(--glass-border) 80%, var(--data-sage) 20%);
     border-radius: var(--radius-paper-xl, 32px);
     background:
-      radial-gradient(circle at 9% 18%, color-mix(in srgb, var(--data-sage) 16%, transparent) 0 86px, transparent 87px),
-      linear-gradient(135deg, var(--data-paper-highlight), var(--glass-bg) 60%);
-    box-shadow: var(--shadow-paper-sm);
-    backdrop-filter: blur(var(--app-blur));
-    -webkit-backdrop-filter: blur(var(--app-blur));
+      radial-gradient(circle at 8% 12%, color-mix(in srgb, var(--data-sage) 14%, transparent) 0 80px, transparent 81px),
+      radial-gradient(circle at 94% 100%, color-mix(in srgb, var(--data-ochre) 8%, transparent) 0 116px, transparent 117px),
+      linear-gradient(135deg, color-mix(in srgb, var(--data-paper-highlight) 88%, var(--glass-bg)), var(--glass-bg) 64%);
+    box-shadow:
+      inset 0 1px 0 color-mix(in srgb, white 36%, transparent),
+      var(--shadow-paper-sm);
+  }
+
+  :global([data-model-prices-section='actions'])::before {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.24;
+    background-image:
+      linear-gradient(var(--data-ledger-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--data-ledger-line) 1px, transparent 1px);
+    background-size: 100% 34px, 34px 100%;
+    mask-image: linear-gradient(135deg, rgba(0, 0, 0, 0.62), transparent 76%);
+    content: '';
   }
 
   :global([data-model-prices-action-part='title']) {
@@ -185,60 +56,195 @@
     position: relative;
     z-index: 1;
     display: grid;
-    grid-template-columns: repeat(2, minmax(150px, 1fr));
-    grid-template-rows: repeat(2, minmax(48px, 1fr));
-    align-content: stretch;
-    align-items: stretch;
-    align-self: stretch;
-    justify-content: stretch;
-    width: 100%;
+    grid-template-columns: repeat(7, minmax(120px, 1fr));
+    align-items: start;
+    gap: 8px;
     min-width: 0;
-    height: 100%;
-    gap: 12px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    padding: 0;
+    scrollbar-color: color-mix(in srgb, var(--app-accent) 40%, transparent) transparent;
+    -webkit-overflow-scrolling: touch;
   }
 
-  :global([data-model-prices-control-item]) {
-    width: 100%;
-    height: 100%;
-    max-width: none;
+  /* Each of the seven cells is a vertical stack: interactive icon + display-only label. */
+  :global([data-model-prices-control-item]),
+  :global(span[data-model-prices-control-item]),
+  :global(div[data-model-prices-control-item]) {
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px;
     min-width: 0;
-    min-height: 48px;
-    justify-content: center;
-    padding: 0 12px;
-    border-color: color-mix(in srgb, var(--glass-border) 82%, transparent);
-    border-radius: 16px;
-    background:
-      linear-gradient(180deg, color-mix(in srgb, white 20%, transparent), transparent),
-      color-mix(in srgb, var(--glass-bg) 76%, var(--app-surface-muted, transparent));
-    color: var(--app-text-regular);
+    min-height: 0;
+    padding: 4px 6px;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    color: var(--app-text-primary);
+  }
+
+  :global([data-model-prices-control-content='true']) {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px;
+    min-width: 0;
     text-align: center;
-    white-space: normal;
   }
 
-  :global([data-model-prices-control-item='status']),
-  :global([data-model-prices-control-item='count']) {
-    color: var(--app-text-muted);
-    font-weight: 800;
-    line-height: 1.35;
+  /* Only icon buttons are interactive; neutralize global button chrome. */
+  :global(div[data-model-prices-control-item] > button.btn),
+  :global(div[data-model-prices-control-item] > button.btn.btn-primary),
+  :global(div[data-model-prices-control-item] > button.btn.btn-secondary),
+  :global(div[data-model-prices-control-item] > button.btn.btn-danger),
+  :global(div[data-model-prices-control-item] > button.btn.btn-ghost) {
+    width: 38px;
+    min-width: 38px;
+    height: 38px;
+    min-height: 38px;
+    margin: 0;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 10px !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    color: inherit;
   }
 
-  :global([data-model-prices-control-item='manual']),
-  :global([data-model-prices-control-item='sync']) {
-    min-height: 48px;
-    box-shadow: none;
+  :global(div[data-model-prices-control-item] > button.btn > span:not(.loading-spinner)) {
+    display: inline-grid;
+    place-items: center;
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    gap: 0;
   }
 
-  :global([data-model-prices-control-item] > span) {
-    display: inline-flex;
+  :global([data-model-prices-control-icon='true']) {
+    display: inline-grid;
+    width: 38px;
+    height: 38px;
+    flex: 0 0 38px;
+    place-items: center;
+    border-radius: 10px;
+    background: var(--app-accent-soft);
+    color: var(--color-primary);
+    transition:
+      transform 160ms ease,
+      background-color 160ms ease,
+      color 160ms ease,
+      box-shadow 160ms ease,
+      border-color 160ms ease;
+  }
+
+  :global([data-model-prices-control-label='true']) {
+    min-width: 0;
+    pointer-events: none;
+    user-select: none;
+    color: var(--app-text-primary);
+    font-size: 13px;
+    font-weight: 650;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+    text-align: center;
+  }
+
+  /* Status / count are non-action indicators. */
+  :global([data-model-prices-control-item='status'][data-model-prices-control-state='connected'] [data-model-prices-control-icon='true']) {
+    width: 38px;
+    height: 38px;
+    flex-basis: 38px;
+    border: 1px solid rgba(16, 185, 129, 0.2);
+    border-radius: 50%;
+    background: rgba(16, 185, 129, 0.1);
+    color: #10b981;
+  }
+
+  :global([data-model-prices-control-item='status'][data-model-prices-control-state='connected'] [data-model-prices-control-label='true']) {
+    display: flex;
     align-items: center;
     justify-content: center;
-    min-width: 0;
-    gap: 7px;
+    gap: 4px;
+    color: var(--app-text-primary);
+    white-space: nowrap;
+  }
+
+  :global([data-model-prices-status-connected='true']) {
+    color: #10b981;
+  }
+
+  :global([data-model-prices-control-item='status'][data-model-prices-control-state='disconnected'] [data-model-prices-control-icon='true']) {
+    width: 38px;
+    height: 38px;
+    flex-basis: 38px;
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    border-radius: 50%;
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+  }
+
+  :global([data-model-prices-control-item='status'][data-model-prices-control-state='disconnected'] [data-model-prices-control-label='true']) {
+    color: #ef4444;
+  }
+
+  :global([data-model-prices-control-item='count'] [data-model-prices-control-icon='true']),
+  :global([data-model-prices-control-item='import'] [data-model-prices-control-icon='true']),
+  :global([data-model-prices-control-item='export'] [data-model-prices-control-icon='true']),
+  :global([data-model-prices-control-item='manual'] [data-model-prices-control-icon='true']),
+  :global([data-model-prices-control-item='sync'] [data-model-prices-control-icon='true']) {
+    background: color-mix(in srgb, var(--data-sage) 14%, transparent);
+    color: color-mix(in srgb, var(--data-sage) 84%, var(--app-text-primary));
+  }
+
+  :global([data-model-prices-control-item='clear'] [data-model-prices-control-icon='true']) {
+    background: color-mix(in srgb, var(--danger-color) 13%, transparent);
+    color: var(--danger-color);
+  }
+
+  /* Hover / focus only on the interactive icon buttons. */
+  :global(div[data-model-prices-control-item] > button.btn:hover:not(:disabled) [data-model-prices-control-icon='true']) {
+    transform: translateY(-1px);
+    background: var(--app-accent-soft);
+    color: var(--primary-color);
+    box-shadow:
+      inset 0 1px 0 color-mix(in srgb, white 34%, transparent),
+      0 8px 16px color-mix(in srgb, var(--app-accent) 14%, transparent);
+  }
+
+  :global(div[data-model-prices-control-item='clear'] > button.btn:hover:not(:disabled) [data-model-prices-control-icon='true']) {
+    background: color-mix(in srgb, var(--danger-color) 16%, transparent);
+    color: var(--danger-color);
+    box-shadow:
+      inset 0 1px 0 color-mix(in srgb, white 28%, transparent),
+      0 8px 16px color-mix(in srgb, var(--danger-color) 16%, transparent);
+  }
+
+  :global(div[data-model-prices-control-item] > button.btn:focus-visible) {
+    outline: none !important;
+    border: 0 !important;
+    box-shadow: none !important;
+  }
+
+  :global(div[data-model-prices-control-item] > button.btn:focus-visible [data-model-prices-control-icon='true']) {
+    box-shadow: 0 0 0 3px var(--primary-ring);
+  }
+
+  :global(div[data-model-prices-control-item] > button.btn:disabled [data-model-prices-control-icon='true']) {
+    opacity: 0.6;
   }
 
   :global([data-model-prices-section='content']) {
-    grid-column: 1 / -1;
+    min-width: 0;
   }
+}
+
+.hiddenInput {
+  display: none;
 }
 
 .confirmBody {
@@ -258,32 +264,11 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .panelFooter button {
+  .modelPricesPanel :global([data-model-prices-control-icon='true']) {
     transition: none;
-
-    &:hover:not(:disabled) {
-      transform: none;
-    }
-  }
-}
-
-@media (max-width: 1080px) {
-  .page {
-    grid-template-columns: 1fr;
   }
 
-  .modelPricesPanel {
-    :global([data-model-prices-section='actions']),
-    :global([data-model-prices-section='content']) {
-      grid-column: 1;
-    }
-  }
-}
-
-@media (max-width: 620px) {
-  .modelPricesPanel {
-    :global([data-model-prices-action-part='controls']) {
-      grid-template-columns: 1fr;
-    }
+  .modelPricesPanel :global(div[data-model-prices-control-item] > button.btn:hover:not(:disabled) [data-model-prices-control-icon='true']) {
+    transform: none;
   }
 }

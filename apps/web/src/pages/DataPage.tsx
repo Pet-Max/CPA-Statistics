@@ -15,6 +15,7 @@ import { downloadBlob } from '@/utils/download';
 import styles from './DataPage.module.scss';
 
 const CLEAR_DATA_CONFIRMATION = 'CLEAR DATA';
+const CLEAR_DATA_UI_CONFIRMATION = '确认';
 
 export function DataPage() {
   const { t } = useTranslation();
@@ -117,25 +118,21 @@ export function DataPage() {
       title: t('data_page.clear_confirm_title', { defaultValue: '确认清空请求数据？' }),
       message: (
         <div className={styles.confirmBody}>
+          <p>{t('data_page.clear_confirm_events', { defaultValue: '将删除当前已存储的请求用量数据和死信记录' })}</p>
           <p>
-            {t('data_page.clear_confirm_body', {
-              defaultValue:
-                '将删除当前已存储的请求用量数据和死信记录。登录凭据、系统配置、模型价格和 API Key 别名不会被清空。此操作不可恢复，建议先导出备份。',
+            {t('data_page.clear_confirm_preserved', {
+              defaultValue: '登录凭据、系统配置、模型价格和 API Key 别名不会被清空',
             })}
           </p>
-          <strong>
-            {t('data_page.clear_confirm_instruction', {
-              defaultValue: '请输入 CLEAR DATA 确认短语后再执行清空。',
-            })}
-          </strong>
+          <p>{t('data_page.clear_confirm_irreversible', { defaultValue: '此操作不可恢复，建议先导出备份' })}</p>
         </div>
       ),
       confirmText: t('data_page.clear_data', { defaultValue: '清空数据' }),
-      confirmPhrase: CLEAR_DATA_CONFIRMATION,
-      confirmPhraseLabel: t('data_page.clear_confirm_phrase_label', {
-        defaultValue: '确认短语',
+      confirmPhrase: CLEAR_DATA_UI_CONFIRMATION,
+      confirmPhraseLabel: '',
+      confirmPhrasePlaceholder: t('data_page.clear_confirm_phrase_placeholder', {
+        defaultValue: '请输入“确认”以清空请求数据',
       }),
-      confirmPhrasePlaceholder: CLEAR_DATA_CONFIRMATION,
       variant: 'danger',
       onConfirm: async () => {
         setClearingData(true);
@@ -143,7 +140,7 @@ export function DataPage() {
           const result = await clearData(CLEAR_DATA_CONFIRMATION);
           showNotification(
             t('data_page.clear_success', {
-              defaultValue: '已清空 {{events}} 条请求数据和 {{deadLetters}} 条死信记录。',
+              defaultValue: '已清空 {{events}} 条请求数据和 {{deadLetters}} 条死信记录',
               events: result.cleared.usageEvents,
               deadLetters: result.cleared.deadLetters,
             }),
@@ -164,60 +161,82 @@ export function DataPage() {
 
   const transferAvailable = requestMonitoringAvailability.available;
 
+  const dataTransferActions = (
+    <>
+      <div data-model-prices-control-item="import">
+        <Button
+          size="xs"
+          iconOnly
+          onClick={handleUsageImportClick}
+          loading={usageImporting}
+          disabled={!transferAvailable}
+          aria-label={t('usage_stats.import')}
+          title={t('usage_stats.import')}
+        >
+          <span data-model-prices-control-icon="true">
+            <IconArrowUpFromLine size={18} />
+          </span>
+        </Button>
+        <span data-model-prices-control-label="true" aria-hidden="true">
+          {t('usage_stats.import')}
+        </span>
+      </div>
+      <div data-model-prices-control-item="export">
+        <Button
+          size="xs"
+          variant="secondary"
+          iconOnly
+          onClick={() => void handleUsageExport()}
+          loading={usageExporting}
+          disabled={!transferAvailable}
+          aria-label={t('usage_stats.export')}
+          title={t('usage_stats.export')}
+        >
+          <span data-model-prices-control-icon="true">
+            <IconArrowDownToLine size={18} />
+          </span>
+        </Button>
+        <span data-model-prices-control-label="true" aria-hidden="true">
+          {t('usage_stats.export')}
+        </span>
+      </div>
+      <div data-model-prices-control-item="clear">
+        <Button
+          size="xs"
+          variant="danger"
+          iconOnly
+          onClick={handleClearData}
+          loading={clearingData}
+          disabled={!transferAvailable}
+          aria-label={t('data_page.clear_data', { defaultValue: '清空数据' })}
+          title={t('data_page.clear_data', { defaultValue: '清空数据' })}
+        >
+          <span data-model-prices-control-icon="true">
+            <IconTrash2 size={18} />
+          </span>
+        </Button>
+        <span data-model-prices-control-label="true" aria-hidden="true">
+          {t('data_page.clear_data', { defaultValue: '清空数据' })}
+        </span>
+      </div>
+      <input
+        ref={usageImportInputRef}
+        type="file"
+        accept=".json,.jsonl,.ndjson,application/json,application/x-ndjson"
+        className={styles.hiddenInput}
+        onChange={handleUsageImportChange}
+      />
+    </>
+  );
+
   return (
     <div className={styles.page}>
-      <section className={styles.transferPanel}>
-        <div className={styles.panelHeader}>
-          <div>
-            <p className={styles.eyebrow}>{t('data_page.transfer_eyebrow', { defaultValue: 'Import / Export' })}</p>
-            <h2>{t('data_page.transfer_title', { defaultValue: '数据迁移' })}</h2>
-            <p>
-              {t('data_page.transfer_desc', {
-                defaultValue: '导入、导出与清空请求事件。',
-              })}
-            </p>
-          </div>
-        </div>
-
-        <div className={styles.panelFooter}>
-          <Button
-            onClick={handleUsageImportClick}
-            loading={usageImporting}
-            disabled={!transferAvailable}
-          >
-            <IconArrowUpFromLine size={16} />
-            {t('usage_stats.import')}
-          </Button>
-          <Button
-            variant="secondary"
-            onClick={() => void handleUsageExport()}
-            loading={usageExporting}
-            disabled={!transferAvailable}
-          >
-            <IconArrowDownToLine size={16} />
-            {t('usage_stats.export')}
-          </Button>
-          <Button
-            variant="danger"
-            onClick={handleClearData}
-            loading={clearingData}
-            disabled={!transferAvailable}
-          >
-            <IconTrash2 size={16} />
-            {t('data_page.clear_data', { defaultValue: '清空数据' })}
-          </Button>
-          <input
-            ref={usageImportInputRef}
-            type="file"
-            accept=".json,.jsonl,.ndjson,application/json,application/x-ndjson"
-            className={styles.hiddenInput}
-            onChange={handleUsageImportChange}
-          />
-        </div>
-      </section>
-
       <section className={styles.modelPricesPanel}>
-        <ModelPricesPage embedded dataPageLayout />
+        <ModelPricesPage
+          embedded
+          dataPageLayout
+          dataTransferActions={dataTransferActions}
+        />
       </section>
     </div>
   );

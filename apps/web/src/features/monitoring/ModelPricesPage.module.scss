@@ -22,6 +22,70 @@
 
 .dataPageLayout {
   min-width: 0;
+
+  .pricePanel {
+    border-color: color-mix(in srgb, var(--pricing-line) 78%, var(--pricing-accent) 22%);
+    border-radius: var(--radius-paper-xl, 32px);
+    background:
+      radial-gradient(circle at 92% 0%, color-mix(in srgb, var(--pricing-sage) 12%, transparent) 0 108px, transparent 109px),
+      linear-gradient(145deg, color-mix(in srgb, var(--pricing-surface-elevated) 78%, var(--pricing-accent-soft)), var(--pricing-surface) 64%);
+    box-shadow:
+      inset 0 1px 0 color-mix(in srgb, white 32%, transparent),
+      var(--shadow-paper-sm);
+  }
+
+  .pricePanel::before {
+    opacity: 0.18;
+    background-image:
+      linear-gradient(var(--pricing-ledger-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--pricing-ledger-line) 1px, transparent 1px);
+    background-size: 100% 34px, 34px 100%;
+  }
+
+  .tableWrap {
+    border-color: color-mix(in srgb, var(--pricing-line) 78%, var(--pricing-accent) 22%);
+    border-radius: 18px;
+    background:
+      linear-gradient(180deg, color-mix(in srgb, var(--pricing-surface-elevated) 88%, var(--pricing-accent-soft)), var(--pricing-surface) 82%),
+      var(--pricing-surface);
+    box-shadow: inset 0 1px 0 color-mix(in srgb, white 28%, transparent);
+  }
+
+  .priceTable th {
+    background:
+      linear-gradient(180deg, color-mix(in srgb, var(--pricing-ochre) 9%, var(--pricing-surface-muted)), var(--pricing-surface-muted));
+    color: color-mix(in srgb, var(--pricing-muted) 68%, var(--pricing-ink));
+    box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--pricing-line) 82%, transparent);
+  }
+
+  .priceTable tbody tr:nth-child(even) td {
+    background: color-mix(in srgb, var(--pricing-surface-muted) 24%, transparent);
+  }
+
+  .priceTable tbody tr:hover td {
+    background: color-mix(in srgb, var(--pricing-accent) 6%, var(--pricing-surface));
+  }
+
+  .emptyState {
+    border-style: solid;
+    border-color: color-mix(in srgb, var(--pricing-ochre) 22%, var(--pricing-line));
+    background: color-mix(in srgb, var(--pricing-surface-muted) 78%, var(--pricing-surface));
+    box-shadow: inset 0 1px 0 color-mix(in srgb, white 22%, transparent);
+  }
+
+  .pricePanel {
+    gap: 14px;
+    padding: clamp(16px, 2vw, 24px);
+  }
+
+  .panelToolbar {
+    gap: 12px;
+    padding-inline: 2px;
+  }
+
+  .tableWrap {
+    border-radius: 20px;
+  }
 }
 
 .actionBar,

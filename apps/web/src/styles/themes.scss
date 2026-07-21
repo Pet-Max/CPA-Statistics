@@ -12,17 +12,16 @@
 :root {
   --font-display: 'Noto Serif SC', 'Songti SC', 'Source Han Serif SC', Georgia, serif;
   --app-bg: #f2eadc;
-  --app-bg-gradient:
-    radial-gradient(circle at 16% 12%, rgba(255, 247, 224, 0.9) 0, rgba(255, 247, 224, 0) 32%),
-    radial-gradient(circle at 84% 8%, rgba(224, 147, 98, 0.2) 0, rgba(224, 147, 98, 0) 34%),
-    linear-gradient(135deg, #f5eddf 0%, #efe1cf 52%, #f7f1e6 100%);
+  --app-bg-gradient: none;
   --app-bg-blob-1-start: #e3a36f;
   --app-bg-blob-1-end: #f1d2a8;
   --app-bg-blob-2-start: #8fa178;
   --app-bg-blob-2-end: #d2b065;
-  --app-bg-blob-1-opacity: 0.34;
-  --app-bg-blob-2-opacity: 0.26;
+  --app-bg-blob-1-opacity: 0;
+  --app-bg-blob-2-opacity: 0;
   --app-bg-blob-blur: 72px;
+  --app-bg-overlay-grid-opacity: 0;
+  --app-bg-overlay-texture-opacity: 0;
   --app-surface: rgba(255, 250, 239, 0.82);
   --app-surface-strong: #fff8ec;
   --app-surface-muted: rgba(255, 248, 236, 0.58);
@@ -180,11 +179,12 @@
 }
 
 [data-theme='white'] {
-  --app-bg: #f5efe5;
-  --app-bg-gradient:
-    radial-gradient(circle at 14% 10%, rgba(255, 251, 238, 0.92) 0, rgba(255, 251, 238, 0) 34%),
-    radial-gradient(circle at 86% 6%, rgba(222, 158, 104, 0.18) 0, rgba(222, 158, 104, 0) 32%),
-    linear-gradient(135deg, #f8f0e4 0%, #efe2d1 52%, #fbf6ec 100%);
+  --app-bg: #f2eadc;
+  --app-bg-gradient: none;
+  --app-bg-blob-1-opacity: 0;
+  --app-bg-blob-2-opacity: 0;
+  --app-bg-overlay-grid-opacity: 0;
+  --app-bg-overlay-texture-opacity: 0;
   --app-surface: rgba(255, 250, 239, 0.9);
   --app-surface-muted: rgba(255, 248, 236, 0.68);
   --surface-paper: rgba(255, 250, 239, 0.9);
@@ -210,6 +210,8 @@
   --app-bg-blob-1-opacity: 0.26;
   --app-bg-blob-2-opacity: 0.18;
   --app-bg-blob-blur: 82px;
+  --app-bg-overlay-grid-opacity: 0.38;
+  --app-bg-overlay-texture-opacity: 0.42;
   --app-surface: rgba(42, 31, 24, 0.84);
   --app-surface-strong: #2b2019;
   --app-surface-muted: rgba(255, 238, 212, 0.08);

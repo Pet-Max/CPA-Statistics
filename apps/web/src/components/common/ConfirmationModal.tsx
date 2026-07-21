@@ -76,7 +76,7 @@ export function ConfirmationModal() {
       {requiredPhrase && (
         <Input
           label={
-            confirmPhraseLabel ||
+            confirmPhraseLabel ??
             t('common.confirm_phrase_label', {
               defaultValue: '输入确认短语',
             })

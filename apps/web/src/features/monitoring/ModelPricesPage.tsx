@@ -1,10 +1,18 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
-import { IconPencil, IconSearch, IconTrash2 } from '@/components/ui/icons';
+import {
+  IconCheck,
+  IconDatabaseZap,
+  IconPencil,
+  IconPlus,
+  IconRefreshCw,
+  IconSearch,
+  IconTrash2,
+} from '@/components/ui/icons';
 import { usePanelFeatureAvailability } from '@/hooks/usePanelFeatureAvailability';
 import type { ModelPriceSyncCandidate, ModelPriceSyncResponse } from '@/services/api/usageService';
 import { useNotificationStore } from '@/stores/useNotificationStore';
@@ -40,9 +48,14 @@ const resolveErrorMessage = (error: unknown, fallback: string) => {
 interface ModelPricesPageProps {
   embedded?: boolean;
   dataPageLayout?: boolean;
+  dataTransferActions?: ReactNode;
 }
 
-export function ModelPricesPage({ embedded = false, dataPageLayout = false }: ModelPricesPageProps) {
+export function ModelPricesPage({
+  embedded = false,
+  dataPageLayout = false,
+  dataTransferActions,
+}: ModelPricesPageProps) {
   const { t } = useTranslation();
   const { showNotification } = useNotificationStore();
   const featureAvailability = usePanelFeatureAvailability();
@@ -179,6 +192,16 @@ export function ModelPricesPage({ embedded = false, dataPageLayout = false }: Mo
     setManualEditorOpen(false);
   };
 
+  const renderDataPageControl = (icon: ReactNode, label: ReactNode) =>
+    dataPageLayout ? (
+      <span data-model-prices-control-content="true">
+        <span data-model-prices-control-icon="true">{icon}</span>
+        <span data-model-prices-control-label="true">{label}</span>
+      </span>
+    ) : (
+      label
+    );
+
   return (
     <div
       className={`${styles.page} ${dataPageLayout ? styles.dataPageLayout : ''}`}
@@ -203,31 +226,86 @@ export function ModelPricesPage({ embedded = false, dataPageLayout = false }: Mo
           className={styles.actionGroup}
           data-model-prices-action-part={dataPageLayout ? 'controls' : undefined}
         >
-          <span className={styles.metaPill} data-model-prices-control-item="status">
-            {usageServiceAvailable
-              ? t('model_prices.usage_service_ready')
-              : t('model_prices.usage_service_required')}
+          <span
+            className={styles.metaPill}
+            data-model-prices-control-item="status"
+            data-model-prices-control-state={usageServiceAvailable ? 'connected' : 'disconnected'}
+          >
+            {renderDataPageControl(
+              <IconCheck size={18} />,
+              usageServiceAvailable
+                ? dataPageLayout
+                  ? (
+                    <>
+                      <span data-model-prices-status-name="true">Manager Server</span>
+                      <span data-model-prices-status-connected="true">已连接</span>
+                    </>
+                  )
+                  : t('model_prices.usage_service_ready')
+                : dataPageLayout
+                  ? t('model_prices.usage_service_disconnected', { defaultValue: '未连接' })
+                  : t('model_prices.usage_service_required')
+            )}
           </span>
           <span className={styles.metaPill} data-model-prices-control-item="count">
-            {t('model_prices.sync_model_count', { count: syncModels.length })}
+            {renderDataPageControl(
+              <IconDatabaseZap size={18} />,
+              t('model_prices.sync_model_count', { count: syncModels.length })
+            )}
           </span>
-          <Button
-            size="xs"
-            variant="secondary"
-            onClick={() => openManualEditor()}
-            className={styles.toolbarButton}
-            data-model-prices-control-item="manual"
-          >
-            {t('model_prices.add_manual')}
-          </Button>
-          <Button
-            size="xs"
-            onClick={() => void handleSync()}
-            loading={syncing}
-            data-model-prices-control-item="sync"
-          >
-            {t('usage_stats.model_price_sync')}
-          </Button>
+          {dataPageLayout ? dataTransferActions : null}
+          {dataPageLayout ? (
+            <div data-model-prices-control-item="manual">
+              <Button
+                size="xs"
+                variant="secondary"
+                iconOnly
+                onClick={() => openManualEditor()}
+                className={styles.toolbarButton}
+                aria-label={t('model_prices.add_manual')}
+                title={t('model_prices.add_manual')}
+              >
+                <span data-model-prices-control-icon="true">
+                  <IconPlus size={18} />
+                </span>
+              </Button>
+              <span data-model-prices-control-label="true" aria-hidden="true">
+                {t('model_prices.add_manual')}
+              </span>
+            </div>
+          ) : (
+            <Button
+              size="xs"
+              variant="secondary"
+              onClick={() => openManualEditor()}
+              className={styles.toolbarButton}
+            >
+              {t('model_prices.add_manual')}
+            </Button>
+          )}
+          {dataPageLayout ? (
+            <div data-model-prices-control-item="sync">
+              <Button
+                size="xs"
+                iconOnly
+                onClick={() => void handleSync()}
+                loading={syncing}
+                aria-label={t('usage_stats.model_price_sync')}
+                title={t('usage_stats.model_price_sync')}
+              >
+                <span data-model-prices-control-icon="true">
+                  <IconRefreshCw size={18} />
+                </span>
+              </Button>
+              <span data-model-prices-control-label="true" aria-hidden="true">
+                {t('usage_stats.model_price_sync')}
+              </span>
+            </div>
+          ) : (
+            <Button size="xs" onClick={() => void handleSync()} loading={syncing}>
+              {t('usage_stats.model_price_sync')}
+            </Button>
+          )}
         </div>
       </section>
 

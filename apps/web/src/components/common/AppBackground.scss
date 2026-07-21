@@ -19,7 +19,7 @@
 }
 
 .app-background::before {
-  opacity: 0.38;
+  opacity: var(--app-bg-overlay-grid-opacity, 0.38);
   background-image:
     linear-gradient(color-mix(in srgb, var(--app-text-primary) 5%, transparent) 1px, transparent 1px),
     linear-gradient(90deg, color-mix(in srgb, var(--app-text-primary) 5%, transparent) 1px, transparent 1px);
@@ -28,7 +28,7 @@
 }
 
 .app-background::after {
-  opacity: 0.42;
+  opacity: var(--app-bg-overlay-texture-opacity, 0.42);
   background:
     radial-gradient(circle at 52% 0%, color-mix(in srgb, var(--surface-paper-strong) 74%, transparent) 0, transparent 38%),
     radial-gradient(circle at var(--content-center-x, 50%) 18%, color-mix(in srgb, var(--app-accent) 11%, transparent) 0, transparent 44%),
@@ -90,7 +90,7 @@
 @media (max-width: 768px) {
   .app-background::before {
     background-size: 34px 34px;
-    opacity: 0.26;
+    opacity: var(--app-bg-overlay-grid-opacity, 0.26);
   }
 
   .app-background__shape-1 {

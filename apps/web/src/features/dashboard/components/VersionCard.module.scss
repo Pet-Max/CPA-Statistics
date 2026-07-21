@@ -1,11 +1,7 @@
 .container {
-  display: grid;
-  grid-template-columns: minmax(0, 1.5fr) minmax(360px, 1fr);
+  display: flex;
+  flex-direction: column;
   gap: 12px;
-
-  @media (max-width: 1360px) {
-    grid-template-columns: 1fr;
-  }
 }
 
 .section {
@@ -35,7 +31,9 @@
 }
 
 .healthGrid {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(150px, 172px));
+  justify-content: space-between;
+  gap: 8px;
 }
 
 .item, .healthItem {
@@ -55,6 +53,26 @@
     background: var(--app-accent-soft);
     border-color: var(--color-primary);
     transform: translateY(-1px);
+  }
+}
+
+/* Keep health checks compact instead of stretching each card across the whole section. */
+.healthItem {
+  gap: 8px;
+  padding: 8px 9px;
+
+  .healthIcon {
+    width: 28px;
+    height: 28px;
+    flex-basis: 28px;
+  }
+
+  .content {
+    gap: 1px;
+
+    .value {
+      font-size: 13px;
+    }
   }
 }
 
@@ -128,9 +146,15 @@
   }
 }
 
+@media (max-width: 760px) {
+  .healthGrid {
+    grid-template-columns: repeat(2, minmax(150px, 172px));
+  }
+}
+
 @media (max-width: 560px) {
   .healthGrid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 172px));
   }
 
   .section {
